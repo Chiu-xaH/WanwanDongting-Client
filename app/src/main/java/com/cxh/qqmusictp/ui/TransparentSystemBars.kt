@@ -1,4 +1,4 @@
-package com.hfut.qqmusictp.ui
+package com.cxh.qqmusictp.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable

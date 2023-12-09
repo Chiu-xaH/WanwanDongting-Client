@@ -1,22 +1,21 @@
-package com.hfut.qqmusictp
+package com.cxh.qqmusictp.activity
 
 import android.os.Bundle
-import android.view.Window
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
-import com.hfut.qqmusictp.ui.TransparentSystemBars
-import com.hfut.qqmusictp.ui.composeUI.MainUI
-import com.hfut.qqmusictp.ui.theme.QQMusicTPTheme
+import androidx.lifecycle.ViewModelProvider
+import com.cxh.qqmusictp.ui.TransparentSystemBars
+import com.cxh.qqmusictp.ui.composeUI.MainUI
+import com.cxh.qqmusictp.ui.theme.QQMusicTPTheme
+import com.cxh.qqmusictp.viewModel.MusicViewModel
 
 class MainActivity : ComponentActivity() {
+    private val vm by lazy { ViewModelProvider(this).get(MusicViewModel::class.java) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -28,7 +27,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     TransparentSystemBars()
-                    MainUI()
+                    MainUI(vm)
                 }
             }
         }

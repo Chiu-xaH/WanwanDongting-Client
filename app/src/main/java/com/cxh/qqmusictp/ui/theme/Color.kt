@@ -1,4 +1,4 @@
-package com.hfut.qqmusictp.ui.theme
+package com.cxh.qqmusictp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

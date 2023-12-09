@@ -1,4 +1,4 @@
-package com.hfut.qqmusictp.ui.theme
+package com.cxh.qqmusictp.ui.theme
 
 import android.app.Activity
 import android.os.Build

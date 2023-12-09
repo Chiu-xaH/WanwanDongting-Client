@@ -1,4 +1,4 @@
-package com.hfut.qqmusictp
+package com.cxh.qqmusictp
 
 import org.junit.Test
 

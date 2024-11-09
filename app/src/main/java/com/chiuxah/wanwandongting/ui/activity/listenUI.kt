@@ -1,9 +1,7 @@
 package com.chiuxah.wanwandongting.ui.activity
 
-import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -11,18 +9,20 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,17 +32,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -50,10 +52,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Observer
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.palette.graphics.Palette
+import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
+import coil.request.SuccessResult
+import com.chiuxah.wanwandongting.MusicService
 import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.logic.dataModel.SearchResponse
@@ -63,36 +73,29 @@ import com.chiuxah.wanwandongting.ui.utils.MyToast
 import com.chiuxah.wanwandongting.ui.utils.Round
 import com.chiuxah.wanwandongting.ui.utils.RowHorizal
 import com.chiuxah.wanwandongting.ui.utils.ScrollText
+import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 import com.chiuxah.wanwandongting.viewModel.MyViewModel
 import com.google.gson.Gson
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel) {
+fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel,vmMusic: MusicViewModel,musicService: MusicService?) {
     var input by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(false) }
 
-    var songInfo by remember { mutableStateOf(SongsInfo("","","","","")) }
     if(showBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
             sheetState = sheetState,
             shape = Round(sheetState)
         ) {
-            PlayOnUI(vm,songInfo)
+            PlayOnUI(vm,musicService,vmMusic)
         }
     }
 
@@ -171,16 +174,16 @@ fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel) {
                                     .size(80.dp)
                             ) },
                             modifier = Modifier.clickable {
-                                MyToast("正在开发")
+                                vmMusic.songInfo.value = songList[index]
+                                showBottomSheet = true
                             },
-                            trailingContent = {
-                                FilledTonalIconButton(onClick = {
-                                    songInfo = songList[index]
-                                    showBottomSheet = true
-                                }) {
-                                    Icon(painterResource(id = R.drawable.play_circle), contentDescription = "")
-                                }
-                            }
+                         //   trailingContent = {
+                           //     FilledTonalIconButton(onClick = {
+
+                             //   }) {
+                               //     Icon(painterResource(id = R.drawable.play_circle), contentDescription = "")
+                                //}
+                            //}
                         )
                     }
                 }
@@ -202,7 +205,8 @@ fun getSearchList(vm: MyViewModel) : List<SongsInfo> {
             val f = str.split("|")
             if(f.size > 1) {
                 val songId = f[0]
-                val title = f[1]
+                var title = f[1]
+                if(title.contains("(")) title = title.substringBefore("(")
                 val singer = f[3]
                 val albumImgId = f[4]
                 val album = f[5]
@@ -228,6 +232,24 @@ fun AlbumImg(albumImgId : String,modifier: Modifier) {
         modifier = modifier
     )
 }
+
+
+suspend fun fetchDominantColor(imageUrl: String): Color? {
+    val loader = ImageLoader(MyApplication.context)
+    val request = ImageRequest.Builder(MyApplication.context)
+        .data(imageUrl)
+        .allowHardware(false)
+        .build()
+    val result = (loader.execute(request) as SuccessResult).drawable
+    val bitmap = result.toBitmap()
+
+    return withContext(Dispatchers.Default) {
+        val palette = Palette.from(bitmap).generate()
+        palette?.dominantSwatch?.rgb?.let { Color(it) }
+    }
+}
+
+
 
 data class GetSongmidResponse(val songmid : String)
 
@@ -292,57 +314,127 @@ fun fetchSong(vm: MyViewModel, songId: String, callback: (String) -> Unit) {
     }
 }
 
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlayOnUI(vm : MyViewModel,songInfo : SongsInfo) {
-
-
-
+fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicViewModel) {
+   // val musicViewModel: MusicViewModel = viewModel()
     var canPlay by remember { mutableStateOf(false) }
     var songUrl by remember { mutableStateOf("") }
-    fetchSong(vm, songInfo.songId) { url ->
+    var backgroundColor by remember { mutableStateOf<Color?>(null) }
+
+    musicViewModel.songInfo.value?.let {
+        fetchSong(vm, it.songId) { url ->
         songUrl = url
         canPlay = url.contains("http")
     }
+    }
+    LaunchedEffect(musicViewModel.songInfo.value?.albumImgId) {
+        val color = fetchDominantColor(MyApplication.qmxApi + "/getAlbumPicture?id=" + musicViewModel.songInfo.value?.albumImgId)
+        backgroundColor = color
+    }
 
+    musicViewModel.currentSongUrl.value = songUrl
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-    ) { innerPadding->
-        Column(modifier = Modifier.padding(innerPadding)) {
-            PlayUI(songInfo,canPlay, songUrl)
+        backgroundColor = Color.Transparent // 设置背景透明
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(backgroundColor ?: Color.Transparent)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = 0.8f)) // 叠加半透明白色蒙版
+            ) {
+                Column(modifier = Modifier.padding(innerPadding).padding(horizontal = 20.dp)) {
+                    PlayUI(canPlay, songUrl,musicViewModel,musicService)
+                }
+            }
         }
     }
 }
 
 @Composable
-fun PlayUI(songInfo : SongsInfo,canPlay : Boolean,songUrl : String) {
-    var mediaPlayer: MediaPlayer? = null
-    var isPlaying by remember { mutableStateOf(false) }
+fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,musicService: MusicService?) {
+
+    val songInfo = musicViewModel.songInfo.value
+
     val scale = animateFloatAsState(
-        targetValue = if (!isPlaying) 0.9f else 1f, // 按下时为0.9，松开时为1
+        targetValue = if (!musicViewModel.isPlaying.value!!) 0.9f else 1f, // 按下时为0.9，松开时为1
         //animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
         animationSpec = tween(MyApplication.animationSpeed / 2, easing = LinearOutSlowInEasing),
         label = "" // 使用弹簧动画
     )
 
-    Spacer(modifier = Modifier.height(50.dp))
-    RowHorizal {
-        AlbumImg(albumImgId = songInfo.albumImgId,
-            modifier = Modifier
-                .shadow(40.dp, RoundedCornerShape(15.dp)) // 添加阴影
-                .size(300.dp)
-                .scale(scale.value)
-                .clip(RoundedCornerShape(15.dp))
-            )
-    }
-    Spacer(modifier = Modifier.height(50.dp))
-    if(canPlay)
-        RowHorizal {
 
+    var currentPosition by remember { mutableStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+    val duration = musicService?.getDuration() ?: 0
+    // 定期更新当前播放位置
+    LaunchedEffect(musicViewModel.isPlaying.value) {
+        while (musicViewModel.isPlaying.value == true) {
+            currentPosition = musicService?.getCurrentPosition() ?: 0
+            delay(1000L)
+        }
+    }
+
+    // 将时长转换为 MM:SS 格式
+    fun formatTime(ms: Int): String {
+        val totalSeconds = ms / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return String.format("%02d:%02d", minutes, seconds)
+    }
+
+
+    Spacer(modifier = Modifier.height(30.dp))
+    RowHorizal {
+        songInfo?.let {
+            AlbumImg(albumImgId = it.albumImgId,
+                modifier = Modifier
+                    .shadow(40.dp, RoundedCornerShape(15.dp)) // 添加阴影
+                    .size(300.dp)
+                    .scale(scale.value)
+                    .clip(RoundedCornerShape(15.dp))
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(20.dp))
+    songInfo?.let { Text(text = it.title, color = MaterialTheme.colorScheme.primary, style = TextStyle(fontSize = 23.sp)) }
+    Spacer(modifier = Modifier.height(5.dp))
+    songInfo?.let { Text(text = it.singer, color = MaterialTheme.colorScheme.secondary, style = TextStyle(fontSize = 18.sp)) }
+    Spacer(modifier = Modifier.height(20.dp))
+    if(canPlay) {
+        Slider(
+            value = currentPosition.toFloat(),
+            valueRange = 0f..duration.toFloat(),
+            onValueChange = {
+                currentPosition = it.toInt()
+                musicService?.seekTo(currentPosition)
+            }
+        )
+        Box(modifier = Modifier
+            .fillMaxWidth()) {
+            Text(
+                text = formatTime(currentPosition),
+                modifier = Modifier.align(Alignment.CenterStart)
+            )
+            Text(
+                text = formatTime(duration),
+                modifier = Modifier.align(Alignment.CenterEnd)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(60.dp))
+        RowHorizal {
             FilledTonalIconButton(
                 onClick = {
-                    MyToast("正在开发")
+                    MyToast(MyApplication.context.getString(R.string.developing))
                 }, modifier = Modifier.size(50.dp)
             ) {
                 Icon(painterResource(id = R.drawable.skip_previous), contentDescription = "",modifier = Modifier.size(30.dp))
@@ -350,37 +442,40 @@ fun PlayUI(songInfo : SongsInfo,canPlay : Boolean,songUrl : String) {
             Spacer(modifier = Modifier.width(30.dp))
             FilledTonalIconButton(
                 onClick = {
-                    if(mediaPlayer == null) {
-                        mediaPlayer = MediaPlayer().apply {
-                            setDataSource(songUrl)
-                            prepareAsync()
-                            setOnPreparedListener {
-                                start()
-                                isPlaying = true
-                            }
-                        }
+                    musicViewModel.isPlaying.value = if (musicViewModel.isPlaying.value == true) {
+                        musicService?.pauseMusic()
+                        false
                     } else {
-                        isPlaying = if(isPlaying) {
-                            mediaPlayer?.pause()
-                            false
-                        } else {
-                            mediaPlayer?.start()
-                            true
-                        }
+                        musicService?.playMusic(songUrl)
+                        true
                     }
+                    //musicViewModel.isPlaying.value = isPlaying // 更新 ViewModel 的播放状态
+                    musicViewModel.currentSongUrl.value = songUrl // 更新 ViewModel 的歌曲 URL
+                    musicViewModel.songInfo.value = songInfo
                 },modifier = Modifier.size(50.dp)
             ) {
-                Icon(painterResource(id = if(isPlaying) R.drawable.pause else R.drawable.play_arrow), contentDescription = "",modifier = Modifier.size(30.dp))
+                Icon(painterResource(id = if(musicViewModel.isPlaying.value == true) R.drawable.pause else R.drawable.play_arrow), contentDescription = "",modifier = Modifier.size(30.dp))
             }
             Spacer(modifier = Modifier.width(30.dp))
 
             FilledTonalIconButton(
                 onClick = {
-                    MyToast("正在开发")
+                    MyToast(MyApplication.context.getString(R.string.developing))
                 },modifier = Modifier.size(50.dp)
             ) {
                 Icon(painterResource(id = R.drawable.skip_next), contentDescription = "",modifier = Modifier.size(30.dp))
             }
+            Spacer(modifier = Modifier.width(30.dp))
+
+            FilledTonalIconButton(
+                onClick = {
+                    musicViewModel.isPlaying.value = false
+                    musicService?.stopMusic()
+                },modifier = Modifier.size(50.dp)
+            ) {
+                Icon(painterResource(id = R.drawable.stop), contentDescription = "",modifier = Modifier.size(30.dp))
+            }
         }
+    }
 
 }

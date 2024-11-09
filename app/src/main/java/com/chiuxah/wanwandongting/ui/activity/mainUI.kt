@@ -1,6 +1,7 @@
 package com.chiuxah.wanwandongting.ui.activity
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -12,7 +13,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,16 +43,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.chiuxah.wanwandongting.MusicService
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.logic.dataModel.NavigationBarItemData
 import com.chiuxah.wanwandongting.ui.utils.HomeBar
 import com.chiuxah.wanwandongting.ui.utils.NavigateUtils.turnToBottomBar
+import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 import com.chiuxah.wanwandongting.viewModel.MyViewModel
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeUI(vm : MyViewModel) {
+fun HomeUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?) {
     val navController = rememberNavController()
     val animation = stringResource(id = R.string.animation_speed).toInt()
     val blur by remember { mutableStateOf(false) }
@@ -78,6 +83,12 @@ fun HomeUI(vm : MyViewModel) {
                             stringResource(id = R.string.home_bottom_bar_home),
                             painterResource(id = R.drawable.album),
                             painterResource(id = R.drawable.album_filled),
+                        ),
+                        NavigationBarItemData(
+                            HomeBar.Play.name,
+                            stringResource(id = R.string.home_bottom_bar_play),
+                            painterResource(id = R.drawable.subscriptions),
+                            painterResource(id = R.drawable.subscriptions_filled),
                         ),
                         NavigationBarItemData(
                             HomeBar.My.name,
@@ -128,7 +139,15 @@ fun HomeUI(vm : MyViewModel) {
         ) {
             composable(HomeBar.Home.name) {
                 Scaffold {
-                    ListenUI(innerPadding,vm)
+                    ListenUI(innerPadding,vm,vmMusic,musicService)
+                }
+            }
+            composable(HomeBar.Play.name) {
+                Scaffold { innerPadding->
+                    Column {
+                        Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
+                        PlayOnUI(vm, musicService,vmMusic)
+                    }
                 }
             }
             composable(HomeBar.My.name) {

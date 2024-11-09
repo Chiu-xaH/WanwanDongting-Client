@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "QQMusicTP"
+rootProject.name = "WanwanDongting"
 include ':app'

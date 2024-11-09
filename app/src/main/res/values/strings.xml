@@ -1,3 +1,8 @@
 <resources>
-    <string name="app_name">QQMusicTP</string>
+    <string name="app_name">婉婉动听</string>
+    <string name="home_top_bar_title">婉婉动听</string>
+    <string name="home_bottom_bar_home">探索</string>
+    <string name="home_bottom_bar_my">我的</string>
+    <string name="search_song_tip">搜索音乐</string>
+    <string name="animation_speed">100</string>
 </resources>

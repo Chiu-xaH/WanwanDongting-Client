@@ -12,6 +12,7 @@ class MusicViewModel : ViewModel() {
 
     val songInfo = MutableLiveData<SongsInfo>(SongsInfo("","","","",""))
 
+    val songmid = MutableLiveData<String?>(null)
     // 当前播放进度（可根据需要添加其他状态）
     val currentProgress = MutableLiveData<Int>(0)
 

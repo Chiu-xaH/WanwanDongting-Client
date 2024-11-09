@@ -1,5 +1,6 @@
 package com.chiuxah.wanwandongting.ui.activity
 
+import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.animation.AnimatedVisibility
@@ -8,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,6 +24,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Scaffold
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,6 +37,8 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -235,17 +241,21 @@ fun AlbumImg(albumImgId : String,modifier: Modifier) {
 
 
 suspend fun fetchDominantColor(imageUrl: String): Color? {
-    val loader = ImageLoader(MyApplication.context)
-    val request = ImageRequest.Builder(MyApplication.context)
-        .data(imageUrl)
-        .allowHardware(false)
-        .build()
-    val result = (loader.execute(request) as SuccessResult).drawable
-    val bitmap = result.toBitmap()
+    try {
+        val loader = ImageLoader(MyApplication.context)
+        val request = ImageRequest.Builder(MyApplication.context)
+            .data(imageUrl)
+            .allowHardware(false)
+            .build()
+        val result = (loader.execute(request) as SuccessResult).drawable
+        val bitmap = result.toBitmap()
 
-    return withContext(Dispatchers.Default) {
-        val palette = Palette.from(bitmap).generate()
-        palette?.dominantSwatch?.rgb?.let { Color(it) }
+        return withContext(Dispatchers.Default) {
+            val palette = Palette.from(bitmap).generate()
+            palette?.dominantSwatch?.rgb?.let { Color(it) }
+        }
+    } catch (_:Exception) {
+        return null
     }
 }
 
@@ -302,10 +312,11 @@ suspend fun getSongUrl(vm: MyViewModel, songmid: String): String {
     }
 }
 
-fun fetchSong(vm: MyViewModel, songId: String, callback: (String) -> Unit) {
+fun fetchSong(vm: MyViewModel, songId: String,musicViewModel: MusicViewModel, callback: (String) -> Unit) {
     CoroutineScope(Dispatchers.Main).launch {
         val songmid = getSongmid(vm, songId)
         if (songmid.isNotEmpty()) {
+            musicViewModel.songmid.value = songmid
             val url = getSongUrl(vm, songmid)
             callback(url)
         } else {
@@ -316,16 +327,19 @@ fun fetchSong(vm: MyViewModel, songId: String, callback: (String) -> Unit) {
 
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicViewModel) {
    // val musicViewModel: MusicViewModel = viewModel()
+     val TAB_MAIN = 0
+     val TAB_RIGHT = 1
     var canPlay by remember { mutableStateOf(false) }
     var songUrl by remember { mutableStateOf("") }
     var backgroundColor by remember { mutableStateOf<Color?>(null) }
 
     musicViewModel.songInfo.value?.let {
-        fetchSong(vm, it.songId) { url ->
+        fetchSong(vm, it.songId,musicViewModel = musicViewModel) { url ->
         songUrl = url
         canPlay = url.contains("http")
     }
@@ -336,6 +350,9 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
     }
 
     musicViewModel.currentSongUrl.value = songUrl
+
+    val pagerState = rememberPagerState(pageCount = { 2 })
+
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -351,8 +368,34 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
                     .fillMaxSize()
                     .background(Color.White.copy(alpha = 0.8f)) // 叠加半透明白色蒙版
             ) {
-                Column(modifier = Modifier.padding(innerPadding).padding(horizontal = 20.dp)) {
-                    PlayUI(canPlay, songUrl,musicViewModel,musicService)
+                Column(modifier = Modifier
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp)) {
+                    HorizontalPager(state = pagerState) { page ->
+                        when(page) {
+                            TAB_MAIN -> {
+                                Scaffold(
+                                    modifier = Modifier.fillMaxSize(),
+                                    backgroundColor = Color.Transparent // 设置背景透明
+                                ) {
+                                    Column {
+                                        PlayUI(canPlay, songUrl,musicViewModel,musicService)
+                                    }
+                                }
+
+                            }
+                            TAB_RIGHT -> {
+                                Scaffold(
+                                    modifier = Modifier.fillMaxSize(),
+                                    backgroundColor = Color.Transparent // 设置背景透明
+                                ) {
+                                    Column {
+                                        lyricsUI(musicViewModel,vm)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -372,56 +415,54 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
     )
 
 
-    var currentPosition by remember { mutableStateOf(0) }
+
     val coroutineScope = rememberCoroutineScope()
     val duration = musicService?.getDuration() ?: 0
     // 定期更新当前播放位置
     LaunchedEffect(musicViewModel.isPlaying.value) {
         while (musicViewModel.isPlaying.value == true) {
-            currentPosition = musicService?.getCurrentPosition() ?: 0
+            musicViewModel.currentProgress.value = musicService?.getCurrentPosition() ?: 0
             delay(1000L)
         }
     }
 
-    // 将时长转换为 MM:SS 格式
-    fun formatTime(ms: Int): String {
-        val totalSeconds = ms / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return String.format("%02d:%02d", minutes, seconds)
-    }
+
 
 
     Spacer(modifier = Modifier.height(30.dp))
-    RowHorizal {
-        songInfo?.let {
-            AlbumImg(albumImgId = it.albumImgId,
-                modifier = Modifier
-                    .shadow(40.dp, RoundedCornerShape(15.dp)) // 添加阴影
-                    .size(300.dp)
-                    .scale(scale.value)
-                    .clip(RoundedCornerShape(15.dp))
-            )
+    Box(modifier = Modifier.scale(scale.value)) {
+        RowHorizal {
+            songInfo?.let {
+                AlbumImg(albumImgId = it.albumImgId,
+                    modifier = Modifier
+                        .size(300.dp)
+                        .shadow(20.dp, RoundedCornerShape(15.dp))
+                        .clip(RoundedCornerShape(15.dp))
+                )
+            }
         }
     }
+
     Spacer(modifier = Modifier.height(20.dp))
     songInfo?.let { Text(text = it.title, color = MaterialTheme.colorScheme.primary, style = TextStyle(fontSize = 23.sp)) }
     Spacer(modifier = Modifier.height(5.dp))
     songInfo?.let { Text(text = it.singer, color = MaterialTheme.colorScheme.secondary, style = TextStyle(fontSize = 18.sp)) }
     Spacer(modifier = Modifier.height(20.dp))
     if(canPlay) {
-        Slider(
-            value = currentPosition.toFloat(),
-            valueRange = 0f..duration.toFloat(),
-            onValueChange = {
-                currentPosition = it.toInt()
-                musicService?.seekTo(currentPosition)
-            }
-        )
+        musicViewModel.currentProgress.value?.let {
+            Slider(
+                value = it.toFloat(),
+                valueRange = 0f..duration.toFloat(),
+                onValueChange = {
+                    musicViewModel.currentProgress.value = it.toInt()
+                    musicService?.seekTo(musicViewModel.currentProgress.value!!)
+                }
+            )
+        }
         Box(modifier = Modifier
             .fillMaxWidth()) {
             Text(
-                text = formatTime(currentPosition),
+                text = formatTime(musicViewModel.currentProgress.value ?: 0),
                 modifier = Modifier.align(Alignment.CenterStart)
             )
             Text(
@@ -478,4 +519,12 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
         }
     }
 
+}
+
+// 将时长转换为 MM:SS 格式
+fun formatTime(ms: Int): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format("%02d:%02d", minutes, seconds)
 }

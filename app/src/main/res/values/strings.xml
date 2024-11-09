@@ -7,4 +7,8 @@
     <string name="search_song_tip">搜索音乐</string>
     <string name="animation_speed">100</string>
     <string name="developing">正在开发</string>
+    <string name="lead_to_list">歌单导入</string>
+    <string name="settings">设置</string>
+    <string name="update">检查更新</string>
+    <string name="loading_lyrics">正在获取歌词</string>
 </resources>

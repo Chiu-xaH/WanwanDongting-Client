@@ -60,7 +60,7 @@ fun HomeUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
     val blur by remember { mutableStateOf(false) }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = {
+        /*topBar = {
             Column {
                 TopAppBar(
                     title = { Text(text = stringResource(id = R.string.home_top_bar_title)) },
@@ -72,7 +72,7 @@ fun HomeUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
                 )
                 //Divider()
             }
-        },
+        },*/
         bottomBar = {
             Column {
                 Divider()
@@ -152,7 +152,7 @@ fun HomeUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
             }
             composable(HomeBar.My.name) {
                 Scaffold {
-
+                    myUI(innerPadding)
                 }
             }
         }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chiuxah.wanwandongting.MusicService
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 import com.chiuxah.wanwandongting.viewModel.MyViewModel
@@ -30,6 +32,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class LyricsRespnse(val songLyrics : String?)
@@ -67,9 +70,19 @@ fun parseLyrics(lyrics: String): List<Pair<String, String>> {
 
 
 @Composable
-fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel) {
+fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicService?) {
     var loading by remember { mutableStateOf(true) }
     val songmid = vmMusic.songmid.value
+
+    var nowTime by remember { mutableStateOf(musicService?.getCurrentPosition() ) }
+    // 定期更新当前播放位置
+    LaunchedEffect(vmMusic.isPlaying.value) {
+        while (vmMusic.isPlaying.value == true) {
+            nowTime = musicService?.getCurrentPosition() ?: 0
+            delay(1000L)
+        }
+    }
+
 
     if(songmid != null && songmid != "") {
         CoroutineScope(Job()).launch {
@@ -88,6 +101,13 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel) {
         }
     }
 
+    fun formatTime(ms: Int): String {
+        val totalSeconds = ms / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return String.format("%02d:%02d", minutes, seconds)
+    }
+
     val lyrics = getLyrics(vm)
     Box(modifier = Modifier.background(Color.Transparent)) {
         if(!loading) {
@@ -99,8 +119,8 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel) {
                     Text(text = parsed[index].second, modifier = Modifier.padding(vertical = 8.dp)
                         ,color = if(time == vmMusic.currentProgress.value?.let { formatTime(it) }) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                         style = TextStyle(
-                            fontSize = if(time == vmMusic.currentProgress.value?.let { formatTime(it) }) 22.sp else 18.sp,
-                            fontWeight = if(time == vmMusic.currentProgress.value?.let { formatTime(it) }) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = if(time == nowTime?.let { formatTime(it) }) 22.sp else 18.sp,
+                            fontWeight = if(time == nowTime?.let { formatTime(it) }) FontWeight.Bold else FontWeight.Normal,
                         )
                     )
                 }
@@ -110,4 +130,5 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel) {
         }
     }
 }
+
 

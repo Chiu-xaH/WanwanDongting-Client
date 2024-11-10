@@ -37,8 +37,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -63,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Observer
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.palette.graphics.Palette
 import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
@@ -97,7 +94,10 @@ fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel,vmMusic: MusicViewMod
 
     if(showBottomSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
+            onDismissRequest = {
+                showBottomSheet = false
+                count = 0
+                               },
             sheetState = sheetState,
             shape = Round(sheetState)
         ) {
@@ -313,19 +313,22 @@ suspend fun getSongUrl(vm: MyViewModel, songmid: String): String {
 }
 
 fun fetchSong(vm: MyViewModel, songId: String,musicViewModel: MusicViewModel, callback: (String) -> Unit) {
-    CoroutineScope(Dispatchers.Main).launch {
-        val songmid = getSongmid(vm, songId)
-        if (songmid.isNotEmpty()) {
-            musicViewModel.songmid.value = songmid
-            val url = getSongUrl(vm, songmid)
-            callback(url)
-        } else {
-            callback("")
+    if(count == 0) {
+        count++
+        CoroutineScope(Dispatchers.Main).launch {
+            val songmid = getSongmid(vm, songId)
+            if (songmid.isNotEmpty()) {
+                musicViewModel.songmid.value = songmid
+                val url = getSongUrl(vm, songmid)
+                callback(url)
+            } else {
+                callback("")
+            }
         }
     }
 }
 
-
+var count = 0
 
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -340,10 +343,11 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
 
     musicViewModel.songInfo.value?.let {
         fetchSong(vm, it.songId,musicViewModel = musicViewModel) { url ->
-        songUrl = url
-        canPlay = url.contains("http")
+            songUrl = url
+            canPlay = url.contains("http")
+        }
     }
-    }
+
     LaunchedEffect(musicViewModel.songInfo.value?.albumImgId) {
         val color = fetchDominantColor(MyApplication.qmxApi + "/getAlbumPicture?id=" + musicViewModel.songInfo.value?.albumImgId)
         backgroundColor = color
@@ -390,7 +394,7 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
                                     backgroundColor = Color.Transparent // 设置背景透明
                                 ) {
                                     Column {
-                                        lyricsUI(musicViewModel,vm)
+                                        lyricsUI(musicViewModel,vm,musicService)
                                     }
                                 }
                             }
@@ -415,13 +419,14 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
     )
 
 
+    var currentPosition by remember { mutableStateOf(0) }
 
     val coroutineScope = rememberCoroutineScope()
     val duration = musicService?.getDuration() ?: 0
     // 定期更新当前播放位置
     LaunchedEffect(musicViewModel.isPlaying.value) {
         while (musicViewModel.isPlaying.value == true) {
-            musicViewModel.currentProgress.value = musicService?.getCurrentPosition() ?: 0
+            currentPosition = musicService?.getCurrentPosition() ?: 0
             delay(1000L)
         }
     }
@@ -443,26 +448,31 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
         }
     }
 
+    fun formatTime(ms: Int): String {
+        val totalSeconds = ms / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return String.format("%02d:%02d", minutes, seconds)
+    }
+
     Spacer(modifier = Modifier.height(20.dp))
     songInfo?.let { Text(text = it.title, color = MaterialTheme.colorScheme.primary, style = TextStyle(fontSize = 23.sp)) }
     Spacer(modifier = Modifier.height(5.dp))
     songInfo?.let { Text(text = it.singer, color = MaterialTheme.colorScheme.secondary, style = TextStyle(fontSize = 18.sp)) }
     Spacer(modifier = Modifier.height(20.dp))
     if(canPlay) {
-        musicViewModel.currentProgress.value?.let {
-            Slider(
-                value = it.toFloat(),
-                valueRange = 0f..duration.toFloat(),
-                onValueChange = {
-                    musicViewModel.currentProgress.value = it.toInt()
-                    musicService?.seekTo(musicViewModel.currentProgress.value!!)
-                }
-            )
-        }
+        Slider(
+            value = currentPosition.toFloat(),
+            valueRange = 0f..duration.toFloat(),
+            onValueChange = {
+                currentPosition = it.toInt()
+                musicService?.seekTo(currentPosition)
+            }
+        )
         Box(modifier = Modifier
             .fillMaxWidth()) {
             Text(
-                text = formatTime(musicViewModel.currentProgress.value ?: 0),
+                text = formatTime(currentPosition),
                 modifier = Modifier.align(Alignment.CenterStart)
             )
             Text(
@@ -522,9 +532,3 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
 }
 
 // 将时长转换为 MM:SS 格式
-fun formatTime(ms: Int): String {
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format("%02d:%02d", minutes, seconds)
-}

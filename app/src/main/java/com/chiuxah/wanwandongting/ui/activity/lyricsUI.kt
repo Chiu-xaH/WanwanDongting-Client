@@ -2,12 +2,18 @@ package com.chiuxah.wanwandongting.ui.activity
 
 import android.os.Looper
 import android.util.Log
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chiuxah.wanwandongting.MusicService
+import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 import com.chiuxah.wanwandongting.viewModel.MyViewModel
@@ -107,28 +114,75 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
         val seconds = totalSeconds % 60
         return String.format("%02d:%02d", minutes, seconds)
     }
+    fun parseTime(time: String): Int {
+        val parts = time.split(":")
+        val minutes = parts[0].toInt()
+        val seconds = parts[1].toInt()
+        return (minutes * 60 + seconds) * 1000
+    }
+
 
     val lyrics = getLyrics(vm)
+    val listState = rememberLazyListState()
     Box(modifier = Modifier.background(Color.Transparent)) {
         if(!loading) {
             val parsed = parseLyrics(lyrics)
-            LazyColumn {
-                item { Spacer(modifier = Modifier.height(5.dp)) }
+
+            val currentIndex = parsed.indexOfFirst { (time, _) ->
+                nowTime?.let { current ->
+                    val formattedCurrent = formatTime(current)
+                    formattedCurrent >= time && (parsed.getOrNull(parsed.indexOfFirst { it.first == time } + 1)?.first
+                        ?: "") > formattedCurrent
+                } ?: false
+            }.coerceAtLeast(0)
+
+            LaunchedEffect(currentIndex) {
+                listState.animateScrollToItem(
+                    //-3代表歌词在第四行放大
+                    index = (currentIndex - 3).coerceAtLeast(0) // 保证歌词固定在第二或第三行
+                )
+            }
+
+            LazyColumn(state = listState) {
+                item { Spacer(modifier = Modifier.height(10.dp)) }
                 items(parsed.size) { index->
                     val time = parsed[index].first
+                    val nextTime = if (index < parsed.size - 1) parsed[index + 1].first else null
+
+
+                    val isCurrentLine = nowTime?.let { current ->
+                        val formattedCurrent = formatTime(current)
+                        formattedCurrent >= time && (nextTime == null || formattedCurrent < nextTime)
+                    } ?: false
+
+                    // 使用 animateFloatAsState 为 sp 创建动画
+                    val fontSize by animateFloatAsState(
+                        targetValue = if (isCurrentLine) 22f else 18f,
+                        animationSpec = tween(
+                            durationMillis = MyApplication.animationSpeed / 2,
+                            easing = LinearOutSlowInEasing
+                        ), label = ""
+                    )
+
                     Text(text = parsed[index].second, modifier = Modifier.padding(vertical = 8.dp)
-                        ,color = if(time == vmMusic.currentProgress.value?.let { formatTime(it) }) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                        .clickable {
+                            //歌词点击动作
+                            musicService?.seekTo(parseTime(time))
+                                   }
+                        ,color = if (isCurrentLine) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                         style = TextStyle(
-                            fontSize = if(time == nowTime?.let { formatTime(it) }) 22.sp else 18.sp,
-                            fontWeight = if(time == nowTime?.let { formatTime(it) }) FontWeight.Bold else FontWeight.Normal,
-                        )
+                            fontSize = fontSize.sp,
+                            fontWeight = if (isCurrentLine) FontWeight.Bold else FontWeight.Normal,
+                        ),
                     )
                 }
+                item { Spacer(modifier = Modifier.height(10.dp)) }
             }
         } else {
             Text(text = stringResource(id = R.string.loading_lyrics) )
         }
     }
 }
+
 
 

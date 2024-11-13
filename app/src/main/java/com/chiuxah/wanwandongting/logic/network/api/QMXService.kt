@@ -35,6 +35,6 @@ interface QMXService {
     fun getListInfo(
         @Query("listId") listId : String,
         @Query("begin") begin : Int = 0,
-        @Query("num") pageNum : Int = 20
+        @Query("num") pageNum : Int = 5000
     ) : Call<ResponseBody>
 }

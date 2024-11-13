@@ -7,8 +7,16 @@
     <string name="search_song_tip">搜索音乐</string>
     <string name="animation_speed">400</string>
     <string name="developing">正在开发</string>
-    <string name="lead_to_list">歌单导入</string>
+    <string name="lead_to_list">导入新歌单</string>
     <string name="settings">设置</string>
     <string name="update">检查更新</string>
     <string name="loading_lyrics">正在获取歌词</string>
+    <string name="lead_song_textfield_tip">粘贴URL或歌单ID</string>
+    <string name="lead_to">开始</string>
+    <string name="lead_to_tips">请前往QQ音乐将自己的歌单(歌单需公开可见)分享到微信,然后在微信打开并复制分享链接,粘贴于此</string>
+    <string name="save_list">保存歌单</string>
+    <string name="save_successful">保存成功</string>
+    <string name="cancel">取消</string>
+    <string name="ok">确定</string>
+    <string name="delete_list_dialog_title">删除歌单</string>
 </resources>

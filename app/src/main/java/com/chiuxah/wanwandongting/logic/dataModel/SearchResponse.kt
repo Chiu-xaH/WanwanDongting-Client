@@ -9,8 +9,9 @@ data class Songs(val curnum : Int, val curpage : Int, val list : List<SongList>)
 
 data class SongList(val f : String)
 
-data class SongsInfo(val songId : String,
-                     val title : String,
-                     val singer : String,
-                     val albumImgId : String,
-                     val album : String,)
+data class SongsInfo(
+    var songId : String,
+    var title : String,
+    var singer : String,
+    val albumImgId : String,
+    var album : String,)

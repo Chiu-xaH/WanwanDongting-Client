@@ -71,6 +71,7 @@ import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.logic.dataModel.SearchResponse
 import com.chiuxah.wanwandongting.logic.dataModel.SongsInfo
+import com.chiuxah.wanwandongting.logic.utils.reEmptyLiveDta
 import com.chiuxah.wanwandongting.ui.utils.MyCard
 import com.chiuxah.wanwandongting.ui.utils.MyToast
 import com.chiuxah.wanwandongting.ui.utils.Round
@@ -124,7 +125,10 @@ fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel,vmMusic: MusicViewMod
                     IconButton(
                         onClick = {
                             CoroutineScope(Job()).launch{
-                                async { loading = true }.await()
+                                async {
+                                    reEmptyLiveDta(vm.searchResponse)
+                                    loading = true
+                                }.await()
                                 async{ vm.searchSongs(input) }.await()
                                 async {
                                     Handler(Looper.getMainLooper()).post{
@@ -278,13 +282,13 @@ suspend fun getSongmid(vm: MyViewModel, songId: String): String {
     }
 
     withContext(Dispatchers.Main) {
-        vm.SongmidResponse.observeForever(observer)
+        vm.songmidResponse.observeForever(observer)
         vm.getSongmid(songId)
     }
 
     return resultChannel.receive().also {
         withContext(Dispatchers.Main) {
-            vm.SongmidResponse.removeObserver(observer)
+            vm.songmidResponse.removeObserver(observer)
         }
     }
 }
@@ -373,13 +377,12 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
                     .background(Color.White.copy(alpha = 0.8f)) // 叠加半透明白色蒙版
             ) {
                 Column(modifier = Modifier
-                    .padding(innerPadding)
-                    .padding(horizontal = 20.dp)) {
+                    .padding(innerPadding)) {
                     HorizontalPager(state = pagerState) { page ->
                         when(page) {
                             TAB_MAIN -> {
                                 Scaffold(
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().padding(horizontal = 15.dp),
                                     backgroundColor = Color.Transparent // 设置背景透明
                                 ) {
                                     Column {
@@ -390,7 +393,7 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
                             }
                             TAB_RIGHT -> {
                                 Scaffold(
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
                                     backgroundColor = Color.Transparent // 设置背景透明
                                 ) {
                                     Column {
@@ -409,10 +412,12 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
 @Composable
 fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,musicService: MusicService?) {
 
+
+    var playing by remember { mutableStateOf(musicViewModel.isPlaying.value ?: false) }
     val songInfo = musicViewModel.songInfo.value
 
     val scale = animateFloatAsState(
-        targetValue = if (!musicViewModel.isPlaying.value!!) 0.9f else 1f, // 按下时为0.9，松开时为1
+        targetValue = if (!playing) 0.9f else 1f, // 按下时为0.9，松开时为1
         //animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
         animationSpec = tween(MyApplication.animationSpeed / 2, easing = LinearOutSlowInEasing),
         label = "" // 使用弹簧动画
@@ -424,8 +429,10 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
     val coroutineScope = rememberCoroutineScope()
     val duration = musicService?.getDuration() ?: 0
     // 定期更新当前播放位置
-    LaunchedEffect(musicViewModel.isPlaying.value) {
-        while (musicViewModel.isPlaying.value == true) {
+    LaunchedEffect(playing) {
+        if(currentPosition == musicService?.getDuration()) musicService.stopMusic()
+        musicViewModel.isPlaying.value = playing
+        while (playing) {
             currentPosition = musicService?.getCurrentPosition() ?: 0
             delay(1000L)
         }
@@ -440,7 +447,7 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
             songInfo?.let {
                 AlbumImg(albumImgId = it.albumImgId,
                     modifier = Modifier
-                        .size(300.dp)
+                        .size(280.dp)
                         .shadow(20.dp, RoundedCornerShape(15.dp))
                         .clip(RoundedCornerShape(15.dp))
                 )
@@ -456,9 +463,9 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
     }
 
     Spacer(modifier = Modifier.height(20.dp))
-    songInfo?.let { Text(text = it.title, color = MaterialTheme.colorScheme.primary, style = TextStyle(fontSize = 23.sp)) }
+    songInfo?.let { Text(text = it.title, color = MaterialTheme.colorScheme.primary, style = TextStyle(fontSize = 23.sp), modifier = Modifier.padding(horizontal = 5.dp)) }
     Spacer(modifier = Modifier.height(5.dp))
-    songInfo?.let { Text(text = it.singer, color = MaterialTheme.colorScheme.secondary, style = TextStyle(fontSize = 18.sp)) }
+    songInfo?.let { Text(text = it.singer, color = MaterialTheme.colorScheme.secondary, style = TextStyle(fontSize = 18.sp) ,modifier = Modifier.padding(horizontal = 5.dp)) }
     Spacer(modifier = Modifier.height(20.dp))
     if(canPlay) {
         Slider(
@@ -470,7 +477,7 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
             }
         )
         Box(modifier = Modifier
-            .fillMaxWidth()) {
+            .fillMaxWidth().padding(horizontal = 5.dp)) {
             Text(
                 text = formatTime(currentPosition),
                 modifier = Modifier.align(Alignment.CenterStart)
@@ -493,14 +500,14 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
             Spacer(modifier = Modifier.width(30.dp))
             FilledTonalIconButton(
                 onClick = {
-                    musicViewModel.isPlaying.value = if (musicViewModel.isPlaying.value == true) {
+                    playing = if (playing) {
                         musicService?.pauseMusic()
                         false
                     } else {
                         musicService?.playMusic(songUrl)
                         true
                     }
-                    //musicViewModel.isPlaying.value = isPlaying // 更新 ViewModel 的播放状态
+                    musicViewModel.isPlaying.value = playing // 更新 ViewModel 的播放状态
                     musicViewModel.currentSongUrl.value = songUrl // 更新 ViewModel 的歌曲 URL
                     musicViewModel.songInfo.value = songInfo
                 },modifier = Modifier.size(50.dp)
@@ -520,7 +527,8 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
 
             FilledTonalIconButton(
                 onClick = {
-                    musicViewModel.isPlaying.value = false
+                    playing = false
+                    musicViewModel.isPlaying.value = playing
                     musicService?.stopMusic()
                 },modifier = Modifier.size(50.dp)
             ) {

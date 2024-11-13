@@ -12,10 +12,10 @@ class MyViewModel : ViewModel() {
         NetWork.makeRequest(call,searchResponse)
     }
 
-    var SongmidResponse = MutableLiveData<String?>()
+    var songmidResponse = MutableLiveData<String?>()
     fun getSongmid(songId : String) {
         val call = NetWork.qmxApi.getSongmid(songId)
-        NetWork.makeRequest(call,SongmidResponse)
+        NetWork.makeRequest(call,songmidResponse)
     }
 
     var songLyricsResponse = MutableLiveData<String?>()
@@ -28,5 +28,11 @@ class MyViewModel : ViewModel() {
     fun getSongUrl(songmid : String) {
         val call = NetWork.qmxApi.getSong(songmid)
         NetWork.makeRequest(call,songUrlResponse)
+    }
+
+    var songListResponse = MutableLiveData<String?>()
+    fun getListInfo(listId : String) {
+        val call = NetWork.qmxApi.getListInfo(listId)
+        NetWork.makeRequest(call,songListResponse)
     }
 }

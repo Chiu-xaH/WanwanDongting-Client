@@ -147,12 +147,13 @@ fun HomeUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
                     Column {
                         Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
                         PlayOnUI(vm, musicService,vmMusic)
+                        Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
                     }
                 }
             }
             composable(HomeBar.My.name) {
                 Scaffold {
-                    myUI(innerPadding)
+                    myUI(innerPadding,vm,vmMusic,musicService)
                 }
             }
         }

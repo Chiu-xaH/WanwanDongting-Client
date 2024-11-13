@@ -1,0 +1,443 @@
+package com.chiuxah.wanwandongting.ui.activity
+
+import android.annotation.SuppressLint
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.MutableLiveData
+import coil.compose.rememberAsyncImagePainter
+import com.chiuxah.wanwandongting.MusicService
+import com.chiuxah.wanwandongting.MyApplication
+import com.chiuxah.wanwandongting.R
+import com.chiuxah.wanwandongting.logic.dao.ListDB
+import com.chiuxah.wanwandongting.logic.dao.SongListDB
+import com.chiuxah.wanwandongting.logic.dataModel.ListInfo
+import com.chiuxah.wanwandongting.logic.dataModel.ListInfoResponse
+import com.chiuxah.wanwandongting.logic.dataModel.SongListItem
+import com.chiuxah.wanwandongting.logic.dataModel.SongsInfo
+import com.chiuxah.wanwandongting.logic.utils.reEmptyLiveDta
+import com.chiuxah.wanwandongting.ui.utils.BottomTip
+import com.chiuxah.wanwandongting.ui.utils.MyCard
+import com.chiuxah.wanwandongting.ui.utils.MyToast
+import com.chiuxah.wanwandongting.ui.utils.Round
+import com.chiuxah.wanwandongting.ui.utils.RowHorizal
+import com.chiuxah.wanwandongting.ui.utils.ScrollText
+import com.chiuxah.wanwandongting.viewModel.MusicViewModel
+import com.chiuxah.wanwandongting.viewModel.MyViewModel
+import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+
+fun parseListId(input: String): String? {
+    // 检查输入是否全为数字
+    if (input.all { it.isDigit() }) {
+        return input // 直接返回输入的数字字符串
+    }
+
+    // 如果不是数字，则尝试从链接中提取 id
+    val regex = """[?&]id=([^&]*)""".toRegex()
+    val id = regex.find(input)?.groupValues?.get(1)
+    return if (id != null) {
+        if (id.all { it.isDigit() }) {
+            id // 直接返回输入的数字字符串
+        } else null
+    } else null
+}
+
+//导入歌单
+@SuppressLint("SuspiciousIndentation")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun listUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?) {
+    var input by remember { mutableStateOf("") }
+
+    var title by remember { mutableStateOf("") }
+
+    var loading by remember { mutableStateOf(false) }
+    var hasParsed by remember { mutableStateOf(false) }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.mediumTopAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                ),
+                title = { Text(stringResource(id = R.string.lead_to_list)) },
+                actions = {
+                    FilledTonalButton(onClick = {
+                        //保存歌单ID到数据库
+                        parseListId(input)?.let { SongListDB.add(it.toLongOrNull() ?: 0L,title) }
+                        MyToast( parseListId(input).toString() +  " " + MyApplication.context.getString(R.string.save_successful))
+                    },
+                        enabled = hasParsed,
+                        modifier = Modifier.padding(horizontal = 15.dp)
+                    ) {
+                        Text(text = stringResource(id = R.string.save_list))
+                    }
+                }
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) {
+            Row() {
+                TextField(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 15.dp),
+                    value = input,
+                    onValueChange = {
+                        input = it
+                    },
+                    label = { Text(stringResource(id = R.string.lead_song_textfield_tip) ) },
+                    singleLine = true,
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                CoroutineScope(Job()).launch{
+                                    async {
+                                        reEmptyLiveDta(vm.songListResponse)
+                                        loading = true
+                                    }.await()
+                                    async{ parseListId(input)?.let { vm.getListInfo(it) } }.await()
+                                    async {
+                                        Handler(Looper.getMainLooper()).post{
+                                            vm.songListResponse.observeForever { result ->
+                                                if (result != null) {
+                                                    if(result.contains("success")) {
+                                                        loading = false
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }) {
+                            Icon(painter = painterResource(R.drawable.search), contentDescription = "description")
+                        }
+                    },
+                    shape = MaterialTheme.shapes.medium,
+                    colors = TextFieldDefaults.textFieldColors(
+                        focusedIndicatorColor = Color.Transparent, // 有焦点时的颜色，透明
+                        unfocusedIndicatorColor = Color.Transparent, // 无焦点时的颜色，绿色
+                    ),
+
+                )
+            }
+
+            if(!hasParsed)
+            Row(modifier = Modifier.padding(horizontal = 15.dp, vertical = 5.dp)) {
+                BottomTip(str = stringResource(id = R.string.lead_to_tips))
+            }
+
+            AnimatedVisibility(
+                visible = loading,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                RowHorizal {
+                    Spacer(modifier = Modifier.height(5.dp))
+                    CircularProgressIndicator()
+                }
+            }
+            Spacer(modifier = Modifier.height(5.dp))
+            AnimatedVisibility(
+                visible = !loading,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                val songList = getListSongs(vm)
+                val listInfo = getListInfo(vm)
+                if (listInfo != null) {
+                    title = listInfo.title.toString()
+                }
+                if (songList != null) { hasParsed = songList.isNotEmpty() }
+                ListInfos(vmMusic,songList,vm,musicService,listInfo)
+            }
+        }
+    }
+}
+
+
+fun getList(vm: MyViewModel,id : String) = vm.getListInfo(id)
+
+fun getListSongs(vm : MyViewModel) : List<SongListItem>? {
+    return try {
+        val json = vm.songListResponse.value
+        val data = Gson().fromJson(json, ListInfoResponse::class.java).result.list
+        data
+    } catch (e:Exception) {
+        Log.d("e",e.toString())
+        null
+    }
+}
+
+fun getListInfo(vm : MyViewModel) : ListInfo? {
+    return try {
+        val json = vm.songListResponse.value
+        val data = Gson().fromJson(json, ListInfoResponse::class.java).result.info
+        data
+    } catch (e:Exception) {
+        Log.d("e",e.toString())
+        null
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ListInfos(vmMusic : MusicViewModel,songList : List<SongListItem>?,vm: MyViewModel,musicService : MusicService?,listInfo: ListInfo?) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showBottomSheet by remember { mutableStateOf(false) }
+
+    if(showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = {
+                showBottomSheet = false
+                count = 0
+            },
+            sheetState = sheetState,
+            shape = Round(sheetState)
+        ) {
+            PlayOnUI(vm,musicService,vmMusic)
+        }
+    }
+    LazyColumn {
+        item {
+         //   MyCard {
+                ListItem(
+                    headlineContent = {
+                        if (listInfo != null) {
+                            listInfo.title?.let { Text(text = it) }
+                        }
+                    },
+                    leadingContent = {
+                        Image(
+                            painter = rememberAsyncImagePainter(
+                                model = listInfo?.pictureUrl,
+                                placeholder = painterResource(id = R.drawable.ic_launcher_background),
+                                error = painterResource(id = R.drawable.ic_launcher_background)
+                            ),
+                            contentDescription = "" ,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(7.dp))
+                                .size(80.dp)
+                        )
+                    }
+                )
+            //}
+        }
+        songList?.let {
+            items(it.size) { index ->
+
+                var singersName = ""
+                val singerList= songList[index].singer
+                if (singerList != null) {
+                    for(i in singerList.indices) {
+                        singersName += (" " + singerList[i].title)
+                    }
+                }
+              //  MyCard {
+                Divider()
+                ListItem(
+                    headlineContent = { songList[index].name?.let { it1 -> Text(text = it1) } },
+                    supportingContent = { songList[index].album.name?.let { it1 -> ScrollText(text = it1) } },
+                    overlineContent = { ScrollText(text = singersName) },
+                    //  leadingContent = { AlbumImg(
+                    //    albumImgId = songList[index].album,
+                    //  modifier = Modifier
+                    //    .clip(RoundedCornerShape(7.dp))
+                    //  .size(80.dp)
+                    //    ) },
+                    modifier = Modifier.clickable {
+                        vmMusic.songInfo.value = SongsInfo(
+                            songId = songList[index].id.toString(),
+                            title = songList[index].name ?: "",
+                            singer = singersName,
+                            album = songList[index].album.name.toString(),
+                            albumImgId = "",
+                            )
+                        vmMusic.songmid.value = songList[index].mid
+                        showBottomSheet = true
+                    },
+                    //   trailingContent = {
+                    //     FilledTonalIconButton(onClick = {
+
+                    //   }) {
+                    //     Icon(painterResource(id = R.drawable.play_circle), contentDescription = "")
+                    //}
+                    //}
+                )
+                //  }
+            }
+        }
+    }
+}
+
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun savedListUI(vm: MyViewModel,listId : Long,vmMusic: MusicViewModel,musicService: MusicService?,listTitle : String) {
+    var input by remember { mutableStateOf("") }
+
+    var loading by remember { mutableStateOf(true) }
+    var num by remember { mutableStateOf(0) }
+
+    if(count == 0) {
+        CoroutineScope(Job()).launch{
+            async { loading = true }.await()
+            async{ vm.getListInfo(listId.toString())  }.await()
+            async {
+                Handler(Looper.getMainLooper()).post{
+                    vm.songListResponse.observeForever { result ->
+                        if (result != null) {
+                            if(result.contains("success")) {
+                                loading = false
+                                count++
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.mediumTopAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                ),
+                title = { ScrollText(listTitle) },
+                actions = {
+                    TextButton(onClick = { /*TODO*/ }) {
+                        Text(text = "共 $num 首")
+                    }
+                }
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) {
+            AnimatedVisibility(
+                visible = loading,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                RowHorizal {
+                    Spacer(modifier = Modifier.height(5.dp))
+                    CircularProgressIndicator()
+                }
+            }
+            Spacer(modifier = Modifier.height(5.dp))
+            AnimatedVisibility(
+                visible = !loading,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                val list = getListSongs(vm)
+                val listInfo = getListInfo(vm)
+                if (list != null) {
+                    num = list.size
+                }
+                val newList = mutableListOf<SongListItem>()
+                Column {
+                    Row() {
+                        TextField(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 15.dp),
+                            value = input,
+                            onValueChange = {
+                                input = it
+                            },
+                            label = { Text(stringResource(id = R.string.search_song_tip) ) },
+                            singleLine = true,
+                            trailingIcon = {
+                                IconButton(
+                                    onClick = {
+                                    }) {
+                                    Icon(painter = painterResource(R.drawable.search), contentDescription = "description")
+                                }
+                            },
+                            shape = MaterialTheme.shapes.medium,
+                            colors = TextFieldDefaults.textFieldColors(
+                                focusedIndicatorColor = Color.Transparent, // 有焦点时的颜色，透明
+                                unfocusedIndicatorColor = Color.Transparent, // 无焦点时的颜色，绿色
+                            ),
+                        )
+                    }
+
+                    if (list != null) {
+                        list.forEach { item->
+                            if(item.name?.contains(input) == true || item.singer.toString().contains(input) || item.album.name.toString().contains(input)) {
+                                newList.add(item)
+                            }
+                        }
+                    }
+
+                    ListInfos(vmMusic,newList,vm, musicService, listInfo)
+                }
+
+            }
+        }
+    }
+}
+
+

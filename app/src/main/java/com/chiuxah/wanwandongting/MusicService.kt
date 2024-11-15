@@ -7,10 +7,12 @@ import android.os.Binder
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chiuxah.wanwandongting.logic.dataModel.SingleSongInfo
 import com.chiuxah.wanwandongting.ui.utils.MyToast
+import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 
-class MusicService : Service() {
+class MusicService() : Service() {
 
     companion object {
         var mediaPlayer: MediaPlayer? = null
@@ -37,6 +39,9 @@ class MusicService : Service() {
     }
     fun getCurrentIndex() : Int {
         return currentIndex
+    }
+    fun setCurrentIndex(index : Int)  {
+         this.currentIndex = index
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -130,18 +135,24 @@ class MusicService : Service() {
 
     }
 
-    fun playNext() {
+    fun getSong(index : Int): SingleSongInfo {
+        return playlist[index]
+    }
+
+    fun playNext() : SingleSongInfo {
         if (playlist.isNotEmpty()) {
             currentIndex = (currentIndex + 1) % playlist.size // 循环播放
             playCurrentSong()
         }
+        return getSong(currentIndex)
     }
 
-    fun playPrevious() {
+    fun playPrevious() : SingleSongInfo {
         if (playlist.isNotEmpty()) {
             currentIndex = if (currentIndex - 1 < 0) playlist.size - 1 else currentIndex - 1
             playCurrentSong()
         }
+        return getSong(currentIndex)
     }
 
 

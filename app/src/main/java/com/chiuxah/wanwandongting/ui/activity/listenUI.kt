@@ -403,7 +403,8 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
                                     backgroundColor = Color.Transparent // 设置背景透明
                                 ) {
                                     Column {
-                                        lyricsUI(musicViewModel,vm,musicService)
+                                        lyricsUI(musicViewModel,vm,musicService,backgroundColor)
+                                        Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
                                     }
                                 }
                             }
@@ -415,7 +416,9 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
                                     backgroundColor = Color.Transparent // 设置背景透明
                                 ) {
                                     Column {
+                                        Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
                                         playQueueUI(musicViewModel,vm,musicService)
+                                        Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
                                     }
                                 }
                             }
@@ -448,10 +451,20 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
     val duration = musicService?.getDuration() ?: 0
     // 定期更新当前播放位置
     LaunchedEffect(playing) {
-        if(currentPosition == musicService?.getDuration()) musicService.stopMusic()
         musicViewModel.isPlaying.value = playing
         while (playing) {
             currentPosition = musicService?.getCurrentPosition() ?: 0
+            if(currentPosition == musicService?.getDuration()) {
+                musicService?.stopMusic()
+                val info = musicService?.playNext()
+                musicViewModel.songInfo.value = info?.let { SongInfo(title = it.title, songId = "", singer = info.singer, album = info.album, albumImgId = "") }
+                if (info != null) {
+                    musicViewModel.currentSongUrl.value = info.url
+                }
+                if (info != null) {
+                    musicViewModel.songmid.value = info.songmid
+                }
+            }
             delay(1000L)
         }
     }
@@ -511,7 +524,17 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
     RowHorizal {
         FilledTonalIconButton(
             onClick = {
-                MyToast(MyApplication.context.getString(R.string.developing))
+
+                musicService?.stopMusic()
+                val info = musicService?.playPrevious()
+                musicViewModel.songInfo.value = info?.let { SongInfo(title = it.title, songId = "", singer = info.singer, album = info.album, albumImgId = "") }
+                if (info != null) {
+                    musicViewModel.currentSongUrl.value = info.url
+                }
+                if (info != null) {
+                    musicViewModel.songmid.value = info.songmid
+                }
+
             }, modifier = Modifier.size(50.dp)
         ) {
             Icon(painterResource(id = R.drawable.skip_previous), contentDescription = "",modifier = Modifier.size(30.dp))
@@ -541,7 +564,15 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
 
         FilledTonalIconButton(
             onClick = {
-                MyToast(MyApplication.context.getString(R.string.developing))
+                musicService?.stopMusic()
+                val info = musicService?.playNext()
+                musicViewModel.songInfo.value = info?.let { SongInfo(title = it.title, songId = "", singer = info.singer, album = info.album, albumImgId = "") }
+                if (info != null) {
+                    musicViewModel.currentSongUrl.value = info.url
+                }
+                if (info != null) {
+                    musicViewModel.songmid.value = info.songmid
+                }
             },modifier = Modifier.size(50.dp)
         ) {
             Icon(painterResource(id = R.drawable.skip_next), contentDescription = "",modifier = Modifier.size(30.dp))

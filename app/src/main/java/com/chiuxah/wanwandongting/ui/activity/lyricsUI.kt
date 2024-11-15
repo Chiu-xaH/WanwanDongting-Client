@@ -1,7 +1,6 @@
 package com.chiuxah.wanwandongting.ui.activity
 
 import android.os.Looper
-import android.util.Log
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -10,10 +9,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,10 +26,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +47,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
 
 data class LyricsRespnse(val songLyrics : String?)
 
@@ -77,7 +84,7 @@ fun parseLyrics(lyrics: String): List<Pair<String, String>> {
 
 
 @Composable
-fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicService?) {
+fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicService?,color : Color?) {
     var loading by remember { mutableStateOf(true) }
     val songmid = vmMusic.songmid.value
 
@@ -124,7 +131,13 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
 
     val lyrics = getLyrics(vm)
     val listState = rememberLazyListState()
-    Box(modifier = Modifier.background(Color.Transparent)) {
+    var blurStatus by remember { mutableStateOf(true) }
+    Box(modifier = Modifier
+        .background(Color.Transparent)
+        .fillMaxWidth()) {
+        FloatingActionButton(onClick = {  blurStatus = !blurStatus  },modifier = Modifier.align(Alignment.TopEnd).size(50.dp).padding(10.dp)) {
+            Icon(painterResource(id = if (blurStatus) R.drawable.blur_on else R.drawable.blur_off), contentDescription = "")
+        }
         if(!loading) {
             val parsed = parseLyrics(lyrics)
 
@@ -136,7 +149,33 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
                 } ?: false
             }.coerceAtLeast(0)
 
+            val isUserScrolling = remember { mutableStateOf(false) }
+            var previousIndex by remember { mutableStateOf(listState.firstVisibleItemIndex) }
+            var previousOffset by remember { mutableStateOf(listState.firstVisibleItemScrollOffset) }
+
+            // 定义一个变量来跟踪是否需要暂停滚动
+            val shouldPauseScroll = remember { mutableStateOf(false) }
+
+            // 监听滚动状态和幅度
+            LaunchedEffect(listState.isScrollInProgress) {
+                snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+                    .collect { (index, offset) ->
+                        // 检测滚动幅度
+                        val indexChange = (index - previousIndex).absoluteValue
+                        val offsetChange = (offset - previousOffset).absoluteValue
+
+                        if(indexChange > 2) {
+                            isUserScrolling.value = true
+                            blurStatus = false
+                        }
+
+                        previousIndex = index
+                        previousOffset = offset
+                    }
+            }
+
             LaunchedEffect(currentIndex) {
+                isUserScrolling.value = false // 表示自动滚动
                 listState.animateScrollToItem(
                     //-3代表歌词在第四行放大
                     index = (currentIndex - 3).coerceAtLeast(0) // 保证歌词固定在第二或第三行
@@ -164,12 +203,23 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
                         ), label = ""
                     )
 
-                    Text(text = parsed[index].second, modifier = Modifier.padding(vertical = 8.dp)
+                    // 如果用户正在滚动，去掉模糊，否则根据当前歌词状态应用模糊
+                    val blurSize by animateDpAsState(
+                        targetValue = if (isCurrentLine || isUserScrolling.value) 0.dp else 2.dp,
+                        animationSpec = tween(
+                            durationMillis = 0,
+                            easing = LinearOutSlowInEasing
+                        ), label = ""
+                    )
+
+                    Text(text = parsed[index].second, modifier = Modifier
+                        .padding(vertical = 8.dp)
+                        .blur(if (blurStatus) blurSize else 0.dp)
                         .clickable {
                             //歌词点击动作
                             musicService?.seekTo(parseTime(time))
-                                   }
-                        ,color = if (isCurrentLine) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                        }
+                        ,color = if (isCurrentLine) color ?: MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                         style = TextStyle(
                             fontSize = fontSize.sp,
                             fontWeight = if (isCurrentLine) FontWeight.Bold else FontWeight.Normal,
@@ -178,8 +228,6 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
                 }
                 item { Spacer(modifier = Modifier.height(10.dp)) }
             }
-        } else {
-            Text(text = stringResource(id = R.string.loading_lyrics) )
         }
     }
 }

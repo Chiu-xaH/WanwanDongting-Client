@@ -70,7 +70,7 @@ import com.chiuxah.wanwandongting.MusicService
 import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.logic.dataModel.SearchResponse
-import com.chiuxah.wanwandongting.logic.dataModel.SongsInfo
+import com.chiuxah.wanwandongting.logic.dataModel.SongInfo
 import com.chiuxah.wanwandongting.logic.utils.reEmptyLiveDta
 import com.chiuxah.wanwandongting.ui.utils.MyCard
 import com.chiuxah.wanwandongting.ui.utils.MyToast
@@ -205,9 +205,9 @@ fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel,vmMusic: MusicViewMod
 }
 
 
-fun getSearchList(vm: MyViewModel) : List<SongsInfo> {
+fun getSearchList(vm: MyViewModel) : List<SongInfo> {
     val json = vm.searchResponse.value
-    val lists = mutableListOf<SongsInfo>()
+    val lists = mutableListOf<SongInfo>()
     try {
         val data = Gson().fromJson(json,SearchResponse::class.java).data.song.list
         for(index in data.indices) {
@@ -220,7 +220,7 @@ fun getSearchList(vm: MyViewModel) : List<SongsInfo> {
                 val singer = f[3]
                 val albumImgId = f[4]
                 val album = f[5]
-                val song = SongsInfo(songId, title, singer, albumImgId, album)
+                val song = SongInfo(songId, title, singer, albumImgId, album)
                 lists.add(song)
             }
         }
@@ -339,8 +339,10 @@ var count = 0
 @Composable
 fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicViewModel) {
    // val musicViewModel: MusicViewModel = viewModel()
-     val TAB_MAIN = 0
-     val TAB_RIGHT = 1
+    val TAB_PLAY = 1
+    val TAB_LYRICS = 2
+    val TAB_QUEUE = 0
+
     var canPlay by remember { mutableStateOf(false) }
     var songUrl by remember { mutableStateOf("") }
     var backgroundColor by remember { mutableStateOf<Color?>(null) }
@@ -359,7 +361,7 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
 
     musicViewModel.currentSongUrl.value = songUrl
 
-    val pagerState = rememberPagerState(pageCount = { 2 })
+    val pagerState = rememberPagerState(pageCount = { 3 }, initialPage = TAB_PLAY)
 
 
     Scaffold(
@@ -380,9 +382,11 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
                     .padding(innerPadding)) {
                     HorizontalPager(state = pagerState) { page ->
                         when(page) {
-                            TAB_MAIN -> {
+                            TAB_PLAY -> {
                                 Scaffold(
-                                    modifier = Modifier.fillMaxSize().padding(horizontal = 15.dp),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 15.dp),
                                     backgroundColor = Color.Transparent // 设置背景透明
                                 ) {
                                     Column {
@@ -391,13 +395,27 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
                                 }
 
                             }
-                            TAB_RIGHT -> {
+                            TAB_LYRICS -> {
                                 Scaffold(
-                                    modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 20.dp),
                                     backgroundColor = Color.Transparent // 设置背景透明
                                 ) {
                                     Column {
                                         lyricsUI(musicViewModel,vm,musicService)
+                                    }
+                                }
+                            }
+                            TAB_QUEUE -> {
+                                Scaffold(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 20.dp),
+                                    backgroundColor = Color.Transparent // 设置背景透明
+                                ) {
+                                    Column {
+                                        playQueueUI(musicViewModel,vm,musicService)
                                     }
                                 }
                             }
@@ -467,76 +485,79 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
     Spacer(modifier = Modifier.height(5.dp))
     songInfo?.let { Text(text = it.singer, color = MaterialTheme.colorScheme.secondary, style = TextStyle(fontSize = 18.sp) ,modifier = Modifier.padding(horizontal = 5.dp)) }
     Spacer(modifier = Modifier.height(20.dp))
-    if(canPlay) {
-        Slider(
-            value = currentPosition.toFloat(),
-            valueRange = 0f..duration.toFloat(),
-            onValueChange = {
-                currentPosition = it.toInt()
-                musicService?.seekTo(currentPosition)
-            }
+
+    Slider(
+        value = currentPosition.toFloat(),
+        valueRange = 0f..duration.toFloat(),
+        onValueChange = {
+            currentPosition = it.toInt()
+            musicService?.seekTo(currentPosition)
+        }
+    )
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 5.dp)) {
+        Text(
+            text = formatTime(currentPosition),
+            modifier = Modifier.align(Alignment.CenterStart)
         )
-        Box(modifier = Modifier
-            .fillMaxWidth().padding(horizontal = 5.dp)) {
-            Text(
-                text = formatTime(currentPosition),
-                modifier = Modifier.align(Alignment.CenterStart)
-            )
-            Text(
-                text = formatTime(duration),
-                modifier = Modifier.align(Alignment.CenterEnd)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(60.dp))
-        RowHorizal {
-            FilledTonalIconButton(
-                onClick = {
-                    MyToast(MyApplication.context.getString(R.string.developing))
-                }, modifier = Modifier.size(50.dp)
-            ) {
-                Icon(painterResource(id = R.drawable.skip_previous), contentDescription = "",modifier = Modifier.size(30.dp))
-            }
-            Spacer(modifier = Modifier.width(30.dp))
-            FilledTonalIconButton(
-                onClick = {
-                    playing = if (playing) {
-                        musicService?.pauseMusic()
-                        false
-                    } else {
-                        musicService?.playMusic(songUrl)
-                        true
-                    }
-                    musicViewModel.isPlaying.value = playing // 更新 ViewModel 的播放状态
-                    musicViewModel.currentSongUrl.value = songUrl // 更新 ViewModel 的歌曲 URL
-                    musicViewModel.songInfo.value = songInfo
-                },modifier = Modifier.size(50.dp)
-            ) {
-                Icon(painterResource(id = if(musicViewModel.isPlaying.value == true) R.drawable.pause else R.drawable.play_arrow), contentDescription = "",modifier = Modifier.size(30.dp))
-            }
-            Spacer(modifier = Modifier.width(30.dp))
-
-            FilledTonalIconButton(
-                onClick = {
-                    MyToast(MyApplication.context.getString(R.string.developing))
-                },modifier = Modifier.size(50.dp)
-            ) {
-                Icon(painterResource(id = R.drawable.skip_next), contentDescription = "",modifier = Modifier.size(30.dp))
-            }
-            Spacer(modifier = Modifier.width(30.dp))
-
-            FilledTonalIconButton(
-                onClick = {
-                    playing = false
-                    musicViewModel.isPlaying.value = playing
-                    musicService?.stopMusic()
-                },modifier = Modifier.size(50.dp)
-            ) {
-                Icon(painterResource(id = R.drawable.stop), contentDescription = "",modifier = Modifier.size(30.dp))
-            }
-        }
+        Text(
+            text = formatTime(duration),
+            modifier = Modifier.align(Alignment.CenterEnd)
+        )
     }
 
+    Spacer(modifier = Modifier.height(60.dp))
+    RowHorizal {
+        FilledTonalIconButton(
+            onClick = {
+                MyToast(MyApplication.context.getString(R.string.developing))
+            }, modifier = Modifier.size(50.dp)
+        ) {
+            Icon(painterResource(id = R.drawable.skip_previous), contentDescription = "",modifier = Modifier.size(30.dp))
+        }
+        Spacer(modifier = Modifier.width(30.dp))
+        FilledTonalIconButton(
+            onClick = {
+                playing = if (playing) {
+                    musicService?.pauseMusic()
+                    false
+                } else {
+                    musicService?.playMusic(songUrl)
+                    true
+                }
+                musicViewModel.isPlaying.value = playing // 更新 ViewModel 的播放状态
+                musicViewModel.currentSongUrl.value = songUrl // 更新 ViewModel 的歌曲 URL
+                musicViewModel.songInfo.value = songInfo
+            },modifier = Modifier.size(50.dp)//,enabled = canPlay
+        ) {
+         //   if(canPlay) {
+                Icon(painterResource(id = if(playing) R.drawable.pause else R.drawable.play_arrow), contentDescription = "",modifier = Modifier.size(30.dp))
+           // } else {
+           //     Icon(painterResource(id = if(playing) R.drawable.pause else R.drawable.progress_activity), contentDescription = "",modifier = Modifier.size(30.dp))
+            //}
+        }
+        Spacer(modifier = Modifier.width(30.dp))
+
+        FilledTonalIconButton(
+            onClick = {
+                MyToast(MyApplication.context.getString(R.string.developing))
+            },modifier = Modifier.size(50.dp)
+        ) {
+            Icon(painterResource(id = R.drawable.skip_next), contentDescription = "",modifier = Modifier.size(30.dp))
+        }
+        Spacer(modifier = Modifier.width(30.dp))
+
+        FilledTonalIconButton(
+            onClick = {
+                playing = false
+                musicViewModel.isPlaying.value = playing
+                musicService?.stopMusic()
+            },modifier = Modifier.size(50.dp)
+        ) {
+            Icon(painterResource(id = R.drawable.stop), contentDescription = "",modifier = Modifier.size(30.dp))
+        }
+    }
 }
 
 // 将时长转换为 MM:SS 格式

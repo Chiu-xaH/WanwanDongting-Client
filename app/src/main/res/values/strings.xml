@@ -19,4 +19,7 @@
     <string name="cancel">取消</string>
     <string name="ok">确定</string>
     <string name="delete_list_dialog_title">删除歌单</string>
+    <string name="play_queue">播放列表</string>
+    <string name="add_false">添加失败 获取歌曲URL失败</string>
+    <string name="play_false">播放失败</string>
 </resources>

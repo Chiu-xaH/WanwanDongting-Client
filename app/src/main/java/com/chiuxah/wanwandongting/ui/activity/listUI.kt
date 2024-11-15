@@ -22,6 +22,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -36,6 +37,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,20 +48,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.MutableLiveData
 import coil.compose.rememberAsyncImagePainter
 import com.chiuxah.wanwandongting.MusicService
 import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
-import com.chiuxah.wanwandongting.logic.dao.ListDB
-import com.chiuxah.wanwandongting.logic.dao.SongListDB
+import com.chiuxah.wanwandongting.logic.dao.SongListManager
 import com.chiuxah.wanwandongting.logic.dataModel.ListInfo
 import com.chiuxah.wanwandongting.logic.dataModel.ListInfoResponse
+import com.chiuxah.wanwandongting.logic.dataModel.SingleSongInfo
 import com.chiuxah.wanwandongting.logic.dataModel.SongListItem
-import com.chiuxah.wanwandongting.logic.dataModel.SongsInfo
+import com.chiuxah.wanwandongting.logic.dataModel.SongInfo
 import com.chiuxah.wanwandongting.logic.utils.reEmptyLiveDta
 import com.chiuxah.wanwandongting.ui.utils.BottomTip
-import com.chiuxah.wanwandongting.ui.utils.MyCard
 import com.chiuxah.wanwandongting.ui.utils.MyToast
 import com.chiuxah.wanwandongting.ui.utils.Round
 import com.chiuxah.wanwandongting.ui.utils.RowHorizal
@@ -67,10 +67,13 @@ import com.chiuxah.wanwandongting.ui.utils.ScrollText
 import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 import com.chiuxah.wanwandongting.viewModel.MyViewModel
 import com.google.gson.Gson
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 fun parseListId(input: String): String? {
     // 检查输入是否全为数字
@@ -112,7 +115,7 @@ fun listUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
                 actions = {
                     FilledTonalButton(onClick = {
                         //保存歌单ID到数据库
-                        parseListId(input)?.let { SongListDB.add(it.toLongOrNull() ?: 0L,title) }
+                        parseListId(input)?.let { SongListManager.add(it.toLongOrNull() ?: 0L,title) }
                         MyToast( parseListId(input).toString() +  " " + MyApplication.context.getString(R.string.save_successful))
                     },
                         enabled = hasParsed,
@@ -288,6 +291,12 @@ fun ListInfos(vmMusic : MusicViewModel,songList : List<SongListItem>?,vm: MyView
                 }
               //  MyCard {
                 Divider()
+                var url : String? by remember { mutableStateOf(null) }
+                val songId = songList[index].id.toString()
+                val title = songList[index].name ?: ""
+                val singer = singersName
+                val album =  songList[index].album.name.toString()
+                val songmid = songList[index].mid.toString()
                 ListItem(
                     headlineContent = { songList[index].name?.let { it1 -> Text(text = it1) } },
                     supportingContent = { songList[index].album.name?.let { it1 -> ScrollText(text = it1) } },
@@ -299,26 +308,80 @@ fun ListInfos(vmMusic : MusicViewModel,songList : List<SongListItem>?,vm: MyView
                     //  .size(80.dp)
                     //    ) },
                     modifier = Modifier.clickable {
-                        vmMusic.songInfo.value = SongsInfo(
-                            songId = songList[index].id.toString(),
-                            title = songList[index].name ?: "",
-                            singer = singersName,
-                            album = songList[index].album.name.toString(),
+                        vmMusic.songInfo.value = SongInfo(
+                            songId,
+                            title,
+                            singer,
+                            album=album,
                             albumImgId = "",
                             )
                         vmMusic.songmid.value = songList[index].mid
                         showBottomSheet = true
                     },
-                    //   trailingContent = {
-                    //     FilledTonalIconButton(onClick = {
-
-                    //   }) {
-                    //     Icon(painterResource(id = R.drawable.play_circle), contentDescription = "")
-                    //}
-                    //}
+                      trailingContent = {
+                         FilledTonalIconButton(onClick = {
+                             //添加到播放队列
+                             CoroutineScope(Job()).launch {
+                                 async { url = getSongUrl(songmid,vm) }.await()
+                                 async {
+                                     if(url != null) {
+                                         val singleSong = SingleSongInfo(singer = singer, title = title, albumImgId = "", album = album, songmid = songmid, url = url)
+                                         musicService?.addSongToPlaylist(singleSong)
+                                     } else {
+                                         MyToast(MyApplication.context.getString(R.string.add_false))
+                                     }
+                                 }
+                             }
+                       }) {
+                         Icon(painterResource(id = R.drawable.playlist_add), contentDescription = "")
+                    }
+                    }
                 )
                 //  }
             }
+        }
+    }
+}
+
+
+suspend fun getSongUrl(songmid: String, vm: MyViewModel): String? {
+    return withContext(Dispatchers.IO) {
+        var url: String = ""
+        val job = CompletableDeferred<String?>()
+
+        try {
+            // Launch the coroutine and perform network request
+            CoroutineScope(Dispatchers.Main).launch {
+               // Log.d("1",vm.songUrlResponse.value.toString())
+               vm.songUrlResponse.value = ""
+                //Log.d("2",vm.songUrlResponse.value.toString())
+                vm.getSongUrl(songmid)
+                vm.songUrlResponse.observeForever { result ->
+                    if (result != null && result.contains("success")) {
+                    //    Log.d("3",vm.songUrlResponse.value.toString())
+                        url = Gson().fromJson(result, GetSongUrlResponse::class.java).songUrl ?: ""
+                        job.complete(url)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            job.complete(null)
+        }
+
+        // Wait for the job to complete
+        job.await()
+
+        // 检查是否为有效链接
+        if (url.contains("http")) {
+            if (url.contains("vkey")) {
+                url
+            } else {
+                Log.e("URL NOT CONTAIN", url)
+                null
+            }
+        } else {
+            Log.e("URL ERROR", url)
+            null
         }
     }
 }

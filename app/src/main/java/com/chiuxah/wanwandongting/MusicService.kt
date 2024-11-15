@@ -7,6 +7,8 @@ import android.os.Binder
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import com.chiuxah.wanwandongting.logic.dataModel.SingleSongInfo
+import com.chiuxah.wanwandongting.ui.utils.MyToast
 
 class MusicService : Service() {
 
@@ -18,12 +20,23 @@ class MusicService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var updateRunnable: Runnable? = null
 
+    private val playlist = mutableListOf<SingleSongInfo>() // 存储歌曲
+    private var currentIndex = 0 // 当前播放索引
+
+
     inner class MusicBinder : Binder() {
         fun getService(): MusicService = this@MusicService
     }
 
     override fun onBind(intent: Intent?): IBinder {
         return binder
+    }
+
+    fun getQueue() : List<SingleSongInfo> {
+        return playlist
+    }
+    fun getCurrentIndex() : Int {
+        return currentIndex
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -51,18 +64,30 @@ class MusicService : Service() {
         if (mediaPlayer == null) {
             // 如果 mediaPlayer 为空，创建并初始化
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(url)
-                prepare()
-                start()
+                try {
+                    setDataSource(url)
+                    prepare()
+                    start()
+                } catch (_:Exception)  {
+                    MyToast(MyApplication.context.getString(R.string.play_false))
+                }
             }
         } else {
             // 如果 mediaPlayer 存在且处于暂停状态，则继续播放
             if (!mediaPlayer!!.isPlaying) {
                 mediaPlayer?.start()
+            } else {
+                // 如果正在播放其他歌曲，重置并播放新的歌曲
+                mediaPlayer?.reset()
+                mediaPlayer?.setDataSource(url)
+                mediaPlayer?.prepare()
+                mediaPlayer?.start()
             }
         }
         startProgressUpdate()
     }
+
+
 
     fun pauseMusic() {
         mediaPlayer?.pause()
@@ -84,9 +109,41 @@ class MusicService : Service() {
         return mediaPlayer?.currentPosition ?: 0
     }
 
+    //调整进度
     fun seekTo(position: Int) {
         mediaPlayer?.seekTo(position)
     }
+
+    fun addSongToPlaylist(song: SingleSongInfo) {
+        playlist.add(song)
+    }
+
+    // 播放当前索引的歌曲
+    private fun playCurrentSong() {
+        if (playlist.isNotEmpty()) {
+            playlist[currentIndex].url?.let { playMusic(it) }
+        }
+    }
+
+
+    fun removeSongFromPlaylist(song: SingleSongInfo) {
+
+    }
+
+    fun playNext() {
+        if (playlist.isNotEmpty()) {
+            currentIndex = (currentIndex + 1) % playlist.size // 循环播放
+            playCurrentSong()
+        }
+    }
+
+    fun playPrevious() {
+        if (playlist.isNotEmpty()) {
+            currentIndex = if (currentIndex - 1 < 0) playlist.size - 1 else currentIndex - 1
+            playCurrentSong()
+        }
+    }
+
 
     private fun startProgressUpdate() {
         updateRunnable = object : Runnable {

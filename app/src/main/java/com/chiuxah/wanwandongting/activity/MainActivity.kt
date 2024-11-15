@@ -11,14 +11,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
 import com.chiuxah.wanwandongting.MusicService
-import com.chiuxah.wanwandongting.logic.dao.SongListDB
 import com.chiuxah.wanwandongting.ui.activity.HomeUI
 import com.chiuxah.wanwandongting.ui.theme.WanwanDongtingTheme
 import com.chiuxah.wanwandongting.ui.utils.TransparentSystemBars

@@ -1,7 +1,7 @@
 package com.chiuxah.wanwandongting.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.MutableLiveData
-import com.chiuxah.wanwandongting.logic.dataModel.SongsInfo
+import com.chiuxah.wanwandongting.logic.dataModel.SongInfo
 
 class MusicViewModel : ViewModel() {
     // 是否正在播放
@@ -10,7 +10,7 @@ class MusicViewModel : ViewModel() {
     // 当前播放的歌曲 URL
     val currentSongUrl = MutableLiveData<String?>(null)
 
-    val songInfo = MutableLiveData<SongsInfo>(SongsInfo("","","","",""))
+    val songInfo = MutableLiveData<SongInfo>(SongInfo("","","","",""))
 
     val songmid = MutableLiveData<String?>(null)
     // 当前播放进度（可根据需要添加其他状态）

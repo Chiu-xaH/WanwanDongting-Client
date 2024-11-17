@@ -60,6 +60,7 @@ import com.chiuxah.wanwandongting.logic.dataModel.SongListItem
 import com.chiuxah.wanwandongting.logic.dataModel.SongInfo
 import com.chiuxah.wanwandongting.logic.utils.reEmptyLiveDta
 import com.chiuxah.wanwandongting.ui.utils.BottomTip
+import com.chiuxah.wanwandongting.ui.utils.MyCard
 import com.chiuxah.wanwandongting.ui.utils.MyToast
 import com.chiuxah.wanwandongting.ui.utils.Round
 import com.chiuxah.wanwandongting.ui.utils.RowHorizal
@@ -254,31 +255,32 @@ fun ListInfos(vmMusic : MusicViewModel,songList : List<SongListItem>?,vm: MyView
             PlayOnUI(vm,musicService,vmMusic)
         }
     }
+    Spacer(modifier = Modifier.height(5.dp))
     LazyColumn {
-        item {
-         //   MyCard {
-                ListItem(
-                    headlineContent = {
-                        if (listInfo != null) {
-                            listInfo.title?.let { Text(text = it) }
-                        }
-                    },
-                    leadingContent = {
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                model = listInfo?.pictureUrl,
-                                placeholder = painterResource(id = R.drawable.ic_launcher_background),
-                                error = painterResource(id = R.drawable.ic_launcher_background)
-                            ),
-                            contentDescription = "" ,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(7.dp))
-                                .size(80.dp)
-                        )
-                    }
-                )
-            //}
-        }
+//        item {
+//         //   MyCard {
+//                ListItem(
+//                    headlineContent = {
+//                        if (listInfo != null) {
+//                            listInfo.title?.let { Text(text = it) }
+//                        }
+//                    },
+//                    leadingContent = {
+//                        Image(
+//                            painter = rememberAsyncImagePainter(
+//                                model = listInfo?.pictureUrl,
+//                                placeholder = painterResource(id = R.drawable.ic_launcher_background),
+//                                error = painterResource(id = R.drawable.ic_launcher_background)
+//                            ),
+//                            contentDescription = "" ,
+//                            modifier = Modifier
+//                                .clip(RoundedCornerShape(7.dp))
+//                                .size(80.dp)
+//                        )
+//                    }
+//                )
+//            //}
+//        }
         songList?.let {
             items(it.size) { index ->
 
@@ -289,31 +291,32 @@ fun ListInfos(vmMusic : MusicViewModel,songList : List<SongListItem>?,vm: MyView
                         singersName += (" " + singerList[i].title)
                     }
                 }
-              //  MyCard {
-                Divider()
+                MyCard {
+                //Divider()
                 var url : String? by remember { mutableStateOf(null) }
                 val songId = songList[index].id.toString()
                 val title = songList[index].name ?: ""
                 val singer = singersName
-                val album =  songList[index].album.name.toString()
+                val album =  songList[index].album
                 val songmid = songList[index].mid.toString()
                 ListItem(
                     headlineContent = { songList[index].name?.let { it1 -> Text(text = it1) } },
                     supportingContent = { songList[index].album.name?.let { it1 -> ScrollText(text = it1) } },
                     overlineContent = { ScrollText(text = singersName) },
-                    //  leadingContent = { AlbumImg(
-                    //    albumImgId = songList[index].album,
-                    //  modifier = Modifier
-                    //    .clip(RoundedCornerShape(7.dp))
-                    //  .size(80.dp)
-                    //    ) },
+                    leadingContent = { AlbumImg(
+                          albumImgId = songList[index].album.mid ?: "",
+                          modifier = Modifier
+                              .clip(RoundedCornerShape(7.dp))
+                              .size(80.dp),
+                          apiType = AlbumImgApiType.ALBUM_MID
+                    ) },
                     modifier = Modifier.clickable {
                         vmMusic.songInfo.value = SongInfo(
                             songId,
                             title,
                             singer,
-                            album=album,
-                            albumImgId = "",
+                            album=album.name.toString(),
+                            albumImgId = album.mid ?: "",
                             )
                         vmMusic.songmid.value = songList[index].mid
                         showBottomSheet = true
@@ -325,7 +328,7 @@ fun ListInfos(vmMusic : MusicViewModel,songList : List<SongListItem>?,vm: MyView
                                  async { url = getSongUrl(songmid,vm) }.await()
                                  async {
                                      if(url != null) {
-                                         val singleSong = SingleSongInfo(singer = singer, title = title, albumImgId = "", album = album, songmid = songmid, url = url)
+                                         val singleSong = SingleSongInfo(singer = singer, title = title, albumImgId = album.mid ?: "", album = album.name.toString(), songmid = songmid, url = url)
                                          musicService?.addSongToPlaylist(singleSong)
                                      } else {
                                          MyToast(MyApplication.context.getString(R.string.add_false))
@@ -337,7 +340,7 @@ fun ListInfos(vmMusic : MusicViewModel,songList : List<SongListItem>?,vm: MyView
                     }
                     }
                 )
-                //  }
+                  }
             }
         }
     }

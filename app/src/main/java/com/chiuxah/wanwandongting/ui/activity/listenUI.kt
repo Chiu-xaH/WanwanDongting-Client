@@ -3,12 +3,15 @@ package com.chiuxah.wanwandongting.ui.activity
 import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,9 +31,14 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Scaffold
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -60,6 +68,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.Observer
 import androidx.palette.graphics.Palette
 import coil.ImageLoader
@@ -70,8 +79,10 @@ import com.chiuxah.wanwandongting.MusicService
 import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.logic.dataModel.SearchResponse
+import com.chiuxah.wanwandongting.logic.dataModel.SingleSongInfo
 import com.chiuxah.wanwandongting.logic.dataModel.SongInfo
 import com.chiuxah.wanwandongting.logic.utils.reEmptyLiveDta
+import com.chiuxah.wanwandongting.ui.activity.AlbumImgApiType.*
 import com.chiuxah.wanwandongting.ui.utils.MyCard
 import com.chiuxah.wanwandongting.ui.utils.MyToast
 import com.chiuxah.wanwandongting.ui.utils.Round
@@ -84,15 +95,43 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 
-
+enum class AlbumImgApiType {
+    IMGID,ALBUM_MID
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel,vmMusic: MusicViewModel,musicService: MusicService?) {
     var input by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var show by remember { mutableStateOf(false) }
     var showBottomSheet by remember { mutableStateOf(false) }
-
+    var page by remember { mutableStateOf(1) }
+    var onclick by remember { mutableStateOf(false) }
+    fun refreshData() {
+        CoroutineScope(Job()).launch{
+            async {
+                reEmptyLiveDta(vm.searchResponse)
+                loading = true
+            }.await()
+            async{ vm.searchSongs(input,page = page) }.await()
+            async {
+                Handler(Looper.getMainLooper()).post{
+                    vm.searchResponse.observeForever { result ->
+                        if (result != null) {
+                            if(result.contains("{")) {
+                                onclick = false
+                                loading = false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if(onclick) {
+        refreshData()
+    }
     if(showBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = {
@@ -106,102 +145,173 @@ fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel,vmMusic: MusicViewMod
         }
     }
 
-    Column() {
-        Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
-        Spacer(modifier = Modifier.height(25.dp))
-        //内容主体
-        RowHorizal {
-            TextField(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 15.dp),
-                value = input,
-                onValueChange = {
-                    input = it
-                },
-                label = { Text(stringResource(id = R.string.search_song_tip) ) },
-                singleLine = true,
-                trailingIcon = {
-                    IconButton(
-                        onClick = {
-                            CoroutineScope(Job()).launch{
-                                async {
-                                    reEmptyLiveDta(vm.searchResponse)
-                                    loading = true
-                                }.await()
-                                async{ vm.searchSongs(input) }.await()
-                                async {
-                                    Handler(Looper.getMainLooper()).post{
-                                        vm.searchResponse.observeForever { result ->
-                                            if (result != null) {
-                                                if(result.contains("{")) {
-                                                    loading = false
+        Column() {
+            Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
+            Spacer(modifier = Modifier.height(25.dp))
+            //内容主体
+            RowHorizal {
+                TextField(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 15.dp),
+                    value = input,
+                    onValueChange = {
+                        input = it
+                    },
+                    label = { Text(stringResource(id = R.string.search_song_tip) ) },
+                    singleLine = true,
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                refreshData()
+                                show = true
+                            }) {
+                            Icon(painter = painterResource(R.drawable.search), contentDescription = "description")
+                        }
+                    },
+                    shape = MaterialTheme.shapes.medium,
+                    colors = TextFieldDefaults.textFieldColors(
+                        focusedIndicatorColor = Color.Transparent, // 有焦点时的颜色，透明
+                        unfocusedIndicatorColor = Color.Transparent, // 无焦点时的颜色，绿色
+                    ),
+                )
+            }
+            AnimatedVisibility(
+                visible = loading,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                RowHorizal {
+                    Spacer(modifier = Modifier.height(5.dp))
+                    CircularProgressIndicator()
+                }
+            }
+            Spacer(modifier = Modifier.height(5.dp))
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !loading,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                val songList = getSearchList(vm)
+                Box() {
+                    LazyColumn {
+                        items(songList.size) { index ->
+                            MyCard {
+                                ListItem(
+                                    headlineContent = { Text(text = songList[index].title) },
+                                    supportingContent = { ScrollText(text = songList[index].album) },
+                                    overlineContent = { ScrollText(text = songList[index].singer) },
+                                    leadingContent = { AlbumImg(
+                                        albumImgId = songList[index].albumImgId,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(7.dp))
+                                            .size(80.dp),
+                                        apiType = IMGID
+                                    ) },
+                                    modifier = Modifier.clickable {
+                                        vmMusic.songInfo.value = songList[index]
+                                        showBottomSheet = true
+                                    },
+                                    trailingContent = {
+                                        FilledTonalIconButton(onClick = {
+                                            //添加到播放队列
+                                            var mid = ""
+                                            CoroutineScope(Job()).launch {
+                                                async {
+                                                    mid = getSongmid(vm =vm, songId = songList[index].songId)
+                                                }.await()
+                                                async {
+                                                    count = 0
+                                                    fetchSong(vm, songList[index].songId,musicViewModel = vmMusic) { url ->
+                                                        Log.d("url", url)
+                                                        if(url.contains("http")) {
+                                                            val singleSong = SingleSongInfo(singer = songList[index].singer, title = songList[index].title, albumImgId = songList[index].albumImgId, album = songList[index].album, songmid = mid, url = url)
+                                                            musicService?.addSongToPlaylist(singleSong)
+                                                            vmMusic.songmid.value = mid
+                                                        } else {
+                                                            MyToast(MyApplication.context.getString(R.string.add_false))
+                                                        }
+                                                        count++;
+                                                    }
                                                 }
                                             }
+                                        }) {
+                                            Icon(painterResource(id = R.drawable.playlist_add), contentDescription = "")
                                         }
                                     }
-                                }
+                                )
                             }
-                        }) {
-                        Icon(painter = painterResource(R.drawable.search), contentDescription = "description")
-                    }
-                },
-                shape = MaterialTheme.shapes.medium,
-                colors = TextFieldDefaults.textFieldColors(
-                    focusedIndicatorColor = Color.Transparent, // 有焦点时的颜色，透明
-                    unfocusedIndicatorColor = Color.Transparent, // 无焦点时的颜色，绿色
-                ),
-            )
-        }
-        AnimatedVisibility(
-            visible = loading,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            RowHorizal {
-                Spacer(modifier = Modifier.height(5.dp))
-                CircularProgressIndicator()
-            }
-        }
-        Spacer(modifier = Modifier.height(5.dp))
-        AnimatedVisibility(
-            visible = !loading,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            val songList = getSearchList(vm)
-            LazyColumn {
-                items(songList.size) { index ->
-                    MyCard {
-                        ListItem(
-                            headlineContent = { Text(text = songList[index].title) },
-                            supportingContent = { ScrollText(text = songList[index].album) },
-                            overlineContent = { ScrollText(text = songList[index].singer) },
-                            leadingContent = { AlbumImg(
-                                albumImgId = songList[index].albumImgId,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(7.dp))
-                                    .size(80.dp)
-                            ) },
-                            modifier = Modifier.clickable {
-                                vmMusic.songInfo.value = songList[index]
-                                showBottomSheet = true
-                            },
-                         //   trailingContent = {
-                           //     FilledTonalIconButton(onClick = {
+                        }
+                        item { Spacer(modifier = Modifier.height(85.dp)) }
+                        item { Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding())) }
 
-                             //   }) {
-                               //     Icon(painterResource(id = R.drawable.play_circle), contentDescription = "")
-                                //}
-                            //}
-                        )
                     }
-                }
-                item { Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding())) }
+
+                    if(show){
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = !loading,
+                            enter = scaleIn(),
+                            exit = scaleOut(),
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(horizontal = 15.dp, vertical = 15.dp)
+                                .padding(innerPadding)
+                        ) {
+                            FloatingActionButton(
+                                onClick = {
+                                    if (page > 1) {
+                                        page--
+                                        onclick = true
+                                        loading = true
+                                    } else {
+                                        MyToast("第一页")
+                                    }
+                                },
+                            ) { Icon(Icons.Filled.ArrowBack, "Add Button") }
+                        }
+
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = !loading,
+                            enter = scaleIn(),
+                            exit = scaleOut(),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(horizontal = 15.dp, vertical = 15.dp)
+                                .padding(innerPadding)
+                        ) {
+                            ExtendedFloatingActionButton(
+                                onClick = {
+                                    page = 1
+                                    onclick = true
+                                    loading = true
+                                },
+                            ) { Text(text = "第${page}页") }
+                        }
+
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = !loading,
+                            enter = scaleIn(),
+                            exit = scaleOut(),
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(horizontal = 15.dp, vertical = 15.dp)
+                                .padding(innerPadding)
+                        ) {
+                            FloatingActionButton(
+                                onClick = {
+                                    page++
+                                    onclick = true
+                                    loading = true
+                                },
+                            ) { Icon(Icons.Filled.ArrowForward, "Add Button") }
+                        }
+                    }
+                    }
             }
+
+            ////////
         }
-        ////////
-    }
+
 }
 
 
@@ -231,10 +341,14 @@ fun getSearchList(vm: MyViewModel) : List<SongInfo> {
 }
 
 @Composable
-fun AlbumImg(albumImgId : String,modifier: Modifier) {
+fun AlbumImg(albumImgId : String,modifier: Modifier,apiType : AlbumImgApiType) {
+    val api = when(apiType) {
+        IMGID -> "/getAlbumPicture?id=$albumImgId"
+        ALBUM_MID -> "/getAlbumPicture2?albumMid=$albumImgId"
+    }
     Image(
         painter = rememberAsyncImagePainter(
-            model = MyApplication.qmxApi + "/getAlbumPicture?id=" + albumImgId,
+            model = MyApplication.qmxApi + api,
             placeholder = painterResource(id = R.drawable.ic_launcher_background),
             error = painterResource(id = R.drawable.ic_launcher_background)
         ),
@@ -355,7 +469,10 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
     }
 
     LaunchedEffect(musicViewModel.songInfo.value?.albumImgId) {
-        val color = fetchDominantColor(MyApplication.qmxApi + "/getAlbumPicture?id=" + musicViewModel.songInfo.value?.albumImgId)
+        val id = musicViewModel.songInfo.value?.albumImgId ?: ""
+
+        val url = if(id.isDigitsOnly()) MyApplication.qmxApi + "/getAlbumPicture?id=" + id else MyApplication.qmxApi + "/getAlbumPicture2?albumMid=" + id
+        val color = fetchDominantColor(url)
         backgroundColor = color
     }
 
@@ -480,7 +597,7 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
                     modifier = Modifier
                         .size(280.dp)
                         .shadow(20.dp, RoundedCornerShape(15.dp))
-                        .clip(RoundedCornerShape(15.dp))
+                        .clip(RoundedCornerShape(15.dp)), if(it.albumImgId.isDigitsOnly()) IMGID else ALBUM_MID
                 )
             }
         }

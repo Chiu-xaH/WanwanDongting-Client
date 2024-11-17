@@ -11,6 +11,7 @@ interface SearchService {
     fun searchSongs(
         @Query("format") format : String = "json",
         @Query("w") text : String,
-        @Query("n") num : Int = 20
+        @Query("n") num : Int = 20,
+        @Query("p") page : Int = 1,
     ) : Call<ResponseBody>
 }

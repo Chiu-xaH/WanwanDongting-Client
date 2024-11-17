@@ -7,8 +7,8 @@ import com.chiuxah.wanwandongting.logic.network.NetWork
 class MyViewModel : ViewModel() {
 
     var searchResponse = MutableLiveData<String?>()
-    fun searchSongs(query : String,num : Int = 20) {
-        val call = NetWork.qmApi.searchSongs(text = query, num = num)
+    fun searchSongs(query : String,num : Int = 20,page: Int = 1) {
+        val call = NetWork.qmApi.searchSongs(text = query, num = num,page = page)
         NetWork.makeRequest(call,searchResponse)
     }
 

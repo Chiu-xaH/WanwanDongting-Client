@@ -46,7 +46,7 @@ fun playQueueUI(vmMusic : MusicViewModel,vm : MyViewModel,musicService: MusicSer
                             vmMusic.isPlaying.value = true
                             vmMusic.songmid.value = item.songmid
                             vmMusic.currentSongUrl.value = item.url
-                            vmMusic.songInfo.value = SongInfo("",item.title,item.singer,"",item.album)
+                            vmMusic.songInfo.value = SongInfo("",item.title,item.singer,item.albumImgId,item.album)
                             musicService.playMusic(it1)
                             musicService.setCurrentIndex(index)
                             playingIndex = musicService?.getCurrentIndex()

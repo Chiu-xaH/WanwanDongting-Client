@@ -7,7 +7,6 @@ import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
@@ -37,7 +35,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,11 +45,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
 import com.chiuxah.wanwandongting.MusicService
 import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
-import com.chiuxah.wanwandongting.logic.dao.SongListManager
+import com.chiuxah.wanwandongting.logic.dao.SongListDataBaseManager
 import com.chiuxah.wanwandongting.logic.dataModel.ListInfo
 import com.chiuxah.wanwandongting.logic.dataModel.ListInfoResponse
 import com.chiuxah.wanwandongting.logic.dataModel.SingleSongInfo
@@ -116,7 +112,7 @@ fun listUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
                 actions = {
                     FilledTonalButton(onClick = {
                         //保存歌单ID到数据库
-                        parseListId(input)?.let { SongListManager.add(it.toLongOrNull() ?: 0L,title) }
+                        parseListId(input)?.let { SongListDataBaseManager.addItem(it.toLongOrNull() ?: 0L,title) }
                         MyToast( parseListId(input).toString() +  " " + MyApplication.context.getString(R.string.save_successful))
                     },
                         enabled = hasParsed,

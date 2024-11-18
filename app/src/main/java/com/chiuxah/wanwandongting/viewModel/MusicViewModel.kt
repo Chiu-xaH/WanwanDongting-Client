@@ -10,7 +10,7 @@ class MusicViewModel : ViewModel() {
     // 当前播放的歌曲 URL
     val currentSongUrl = MutableLiveData<String?>(null)
 
-    val songInfo = MutableLiveData<SongInfo>(SongInfo("","","","",""))
+    val songInfo = MutableLiveData<SongInfo>(SongInfo("","未在播放","未在播放","","未在播放"))
 
     val songmid = MutableLiveData<String?>(null)
     // 当前播放进度（可根据需要添加其他状态）

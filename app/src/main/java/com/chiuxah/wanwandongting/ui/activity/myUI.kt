@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.chiuxah.wanwandongting.MusicService
 import com.chiuxah.wanwandongting.R
-import com.chiuxah.wanwandongting.logic.dao.SongListManager
+import com.chiuxah.wanwandongting.logic.dao.SongListDataBaseManager
 import com.chiuxah.wanwandongting.ui.utils.ActivedTopBar
 import com.chiuxah.wanwandongting.ui.utils.DividerText
 import com.chiuxah.wanwandongting.ui.utils.LittleDialog
@@ -64,7 +64,7 @@ fun myUI(innerPadding: PaddingValues,vm : MyViewModel,vmMusic : MusicViewModel,m
         LittleDialog(
             onDismissRequest = { showBottomSheet_delete = false },
             onConfirmation = {
-                SongListManager.remove(id)
+                SongListDataBaseManager.remove(id)
                 showBottomSheet_delete = false
                              },
             dialogTitle = stringResource(id = R.string.delete_list_dialog_title),
@@ -93,7 +93,7 @@ fun myUI(innerPadding: PaddingValues,vm : MyViewModel,vmMusic : MusicViewModel,m
             },
             modifier = Modifier.clickable { showBottomSheet = true }
         )
-        val lists = SongListManager.queryAll()
+        val lists = SongListDataBaseManager.queryAll()
         for(i in lists.indices) {
             MyCard {
                 ListItem(

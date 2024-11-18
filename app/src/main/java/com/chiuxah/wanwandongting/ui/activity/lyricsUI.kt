@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.FloatingActionButtonElevation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -84,7 +87,7 @@ fun parseLyrics(lyrics: String): List<Pair<String, String>> {
 
 
 @Composable
-fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicService?,color : Color?) {
+fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicService?,color : Color?,innerPadding : PaddingValues) {
     var loading by remember { mutableStateOf(true) }
     val songmid = vmMusic.songmid.value
 
@@ -135,8 +138,14 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
     Box(modifier = Modifier
         .background(Color.Transparent)
         .fillMaxWidth()) {
-        FloatingActionButton(onClick = {  blurStatus = !blurStatus  },modifier = Modifier.align(Alignment.TopEnd).size(50.dp).padding(10.dp)) {
-            Icon(painterResource(id = if (blurStatus) R.drawable.blur_on else R.drawable.blur_off), contentDescription = "")
+        FloatingActionButton(
+            onClick = {  blurStatus = !blurStatus  },
+            modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+            containerColor = Color.Transparent,
+            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(0.dp),
+            contentColor = color?.darker() ?: MaterialTheme.colorScheme.primary
+            ) {
+            Icon(painterResource(id = if (!blurStatus) R.drawable.visibility else R.drawable.visibility_off), contentDescription = "")
         }
         if(!loading) {
             val parsed = parseLyrics(lyrics)
@@ -198,7 +207,7 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
                     val fontSize by animateFloatAsState(
                         targetValue = if (isCurrentLine) 22f else 18f,
                         animationSpec = tween(
-                            durationMillis = MyApplication.animationSpeed / 2,
+                            durationMillis = MyApplication.animationSpeed/2,
                             easing = LinearOutSlowInEasing
                         ), label = ""
                     )
@@ -207,7 +216,7 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
                     val blurSize by animateDpAsState(
                         targetValue = if (isCurrentLine || isUserScrolling.value) 0.dp else 2.dp,
                         animationSpec = tween(
-                            durationMillis = 0,
+                            durationMillis = MyApplication.animationSpeed/2,
                             easing = LinearOutSlowInEasing
                         ), label = ""
                     )
@@ -219,10 +228,23 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
                             //歌词点击动作
                             musicService?.seekTo(parseTime(time))
                         }
-                        ,color = if (isCurrentLine) color ?: MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                        ,color =
+                        if(color != null) {
+                            if (isCurrentLine) color.darker(0.5f) else color.lighter(.7f)
+                        } else {
+                            if (isCurrentLine) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                        },
                         style = TextStyle(
                             fontSize = fontSize.sp,
                             fontWeight = if (isCurrentLine) FontWeight.Bold else FontWeight.Normal,
+                        ),
+                    )
+                }
+                items(5) {
+                    Text(text = "", modifier = Modifier
+                        .padding(vertical = 8.dp),
+                        style = TextStyle(
+                            fontSize = 18.sp,
                         ),
                     )
                 }
@@ -233,4 +255,20 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
 }
 
 
+fun Color.darker(factor: Float = 0.5f): Color {
+    return Color(
+        red = (this.red * factor).coerceIn(0f, 1f),
+        green = (this.green * factor).coerceIn(0f, 1f),
+        blue = (this.blue * factor).coerceIn(0f, 1f),
+        alpha = this.alpha
+    )
+}
 
+fun Color.lighter(factor: Float = 0.7f): Color {
+    return Color(
+        red = (this.red * factor).coerceIn(0f, 1f),
+        green = (this.green * factor).coerceIn(0f, 1f),
+        blue = (this.blue * factor).coerceIn(0f, 1f),
+        alpha = this.alpha
+    )
+}

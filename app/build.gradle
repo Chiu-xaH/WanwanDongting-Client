@@ -92,5 +92,12 @@ dependencies {
     implementation 'io.coil-kt:coil-compose:2.5.0'
     //调色盘
     implementation 'androidx.palette:palette-ktx:1.0.0'
-
+    //模糊库
+    implementation 'dev.chrisbanes.haze:haze:0.5.2'
+    //媒体控制
+//    implementation 'androidx.media3:media3-exoplayer:1.2.1'
+//    implementation 'androidx.media3:media3-exoplayer-dash:1.2.1'
+//    implementation 'androidx.media3:media3-session:1.2.1'
+//    implementation 'androidx.media3:media3-ui:1.2.1'
+//    implementation 'androidx.media:media:1.6.0'
 }

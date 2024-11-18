@@ -7,10 +7,8 @@ import android.os.Binder
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chiuxah.wanwandongting.logic.dataModel.SingleSongInfo
 import com.chiuxah.wanwandongting.ui.utils.MyToast
-import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 
 class MusicService() : Service() {
 
@@ -23,7 +21,7 @@ class MusicService() : Service() {
     private var updateRunnable: Runnable? = null
 
     private val playlist = mutableListOf<SingleSongInfo>() // 存储歌曲
-    private var currentIndex = 0 // 当前播放索引
+    private var currentIndex = -1 // 当前播放索引
 
 
     inner class MusicBinder : Binder() {
@@ -125,18 +123,20 @@ class MusicService() : Service() {
 
     // 播放当前索引的歌曲
     private fun playCurrentSong() {
-        if (playlist.isNotEmpty()) {
+        if (playlist.size > 0 && currentIndex != -1) {
             playlist[currentIndex].url?.let { playMusic(it) }
         }
     }
 
 
     fun removeSongFromPlaylist(song: SingleSongInfo) {
-
+        playlist.remove(song)
     }
 
-    fun getSong(index : Int): SingleSongInfo {
-        return playlist[index]
+    private fun getSong(index : Int): SingleSongInfo {
+        return if(index != -1)
+            playlist[index]
+        else SingleSongInfo("未在播放","未在播放","","未在播放")
     }
 
     fun playNext() : SingleSongInfo {

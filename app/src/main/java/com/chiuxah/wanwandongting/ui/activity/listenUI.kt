@@ -6,6 +6,7 @@ import android.os.Looper
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -19,7 +20,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,17 +37,21 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -62,6 +69,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -346,15 +354,22 @@ fun AlbumImg(albumImgId : String,modifier: Modifier,apiType : AlbumImgApiType) {
         IMGID -> "/getAlbumPicture?id=$albumImgId"
         ALBUM_MID -> "/getAlbumPicture2?albumMid=$albumImgId"
     }
-    Image(
-        painter = rememberAsyncImagePainter(
-            model = MyApplication.qmxApi + api,
-            placeholder = painterResource(id = R.drawable.ic_launcher_background),
-            error = painterResource(id = R.drawable.ic_launcher_background)
-        ),
-        contentDescription = "" ,
-        modifier = modifier
-    )
+    Box(
+        modifier.aspectRatio(1f)
+    ) {
+        Image(
+            painter = rememberAsyncImagePainter(
+                model = MyApplication.qmxApi + api,
+                placeholder = painterResource(id = R.drawable.ic_launcher_background),
+                error = painterResource(id = R.drawable.ic_launcher_background)
+            ),
+            contentDescription = "" ,
+            contentScale = ContentScale.Crop, // 填满 Box 并裁剪
+            modifier = Modifier.fillMaxSize() // 图片填满整个 Box
+        )
+    }
+
+
 }
 
 
@@ -507,7 +522,7 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
                                     backgroundColor = Color.Transparent // 设置背景透明
                                 ) {
                                     Column {
-                                        PlayUI(canPlay, songUrl,musicViewModel,musicService)
+                                        PlayUI(backgroundColor, songUrl,musicViewModel,musicService,canPlay)
                                     }
                                 }
 
@@ -520,7 +535,7 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
                                     backgroundColor = Color.Transparent // 设置背景透明
                                 ) {
                                     Column {
-                                        lyricsUI(musicViewModel,vm,musicService,backgroundColor)
+                                        lyricsUI(musicViewModel,vm,musicService,backgroundColor,innerPadding)
                                         Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
                                     }
                                 }
@@ -548,7 +563,7 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
 }
 
 @Composable
-fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,musicService: MusicService?) {
+fun PlayUI(color : Color?,songUrl : String,musicViewModel: MusicViewModel,musicService: MusicService?,canPlay : Boolean) {
 
 
     var playing by remember { mutableStateOf(musicViewModel.isPlaying.value ?: false) }
@@ -572,15 +587,11 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
         while (playing) {
             currentPosition = musicService?.getCurrentPosition() ?: 0
             if(currentPosition == musicService?.getDuration()) {
-                musicService?.stopMusic()
-                val info = musicService?.playNext()
-                musicViewModel.songInfo.value = info?.let { SongInfo(title = it.title, songId = "", singer = info.singer, album = info.album, albumImgId = "") }
-                if (info != null) {
-                    musicViewModel.currentSongUrl.value = info.url
-                }
-                if (info != null) {
-                    musicViewModel.songmid.value = info.songmid
-                }
+                musicService.stopMusic()
+                val info = musicService.playNext()
+                musicViewModel.songInfo.value = SongInfo(title = info.title, songId = "", singer = info.singer, album = info.album, albumImgId = "")
+                musicViewModel.currentSongUrl.value = info.url
+                musicViewModel.songmid.value = info.songmid
             }
             delay(1000L)
         }
@@ -588,20 +599,30 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
 
 
 
+    val shadowSize by animateDpAsState(
+        targetValue = if (!playing) 20.dp else 5.dp,
+        animationSpec = tween(
+            durationMillis = MyApplication.animationSpeed,
+            easing = LinearOutSlowInEasing
+        ), label = ""
+    )
 
     Spacer(modifier = Modifier.height(30.dp))
-    Box(modifier = Modifier.scale(scale.value)) {
+
         RowHorizal {
             songInfo?.let {
                 AlbumImg(albumImgId = it.albumImgId,
                     modifier = Modifier
-                        .size(280.dp)
-                        .shadow(20.dp, RoundedCornerShape(15.dp))
-                        .clip(RoundedCornerShape(15.dp)), if(it.albumImgId.isDigitsOnly()) IMGID else ALBUM_MID
+                        .padding(horizontal = 10.dp)
+                        .scale(scale.value)
+                        .shadow(shadowSize, RoundedCornerShape(15.dp))
+                        .clip(RoundedCornerShape(15.dp))
+                        ,
+                    if(it.albumImgId.isDigitsOnly()) IMGID else ALBUM_MID
                 )
             }
         }
-    }
+
 
     fun formatTime(ms: Int): String {
         val totalSeconds = ms / 1000
@@ -610,10 +631,18 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
         return String.format("%02d:%02d", minutes, seconds)
     }
 
-    Spacer(modifier = Modifier.height(20.dp))
-    songInfo?.let { Text(text = it.title, color = MaterialTheme.colorScheme.primary, style = TextStyle(fontSize = 23.sp), modifier = Modifier.padding(horizontal = 5.dp)) }
+    val colorLight = color?.lighter() ?: MaterialTheme.colorScheme.secondary
+    val colorDark = color?.darker() ?: MaterialTheme.colorScheme.primary
+    val colorLightset = color?.lighter()?.lighter(1.5f) ?: MaterialTheme.colorScheme.secondary
+
+    Spacer(modifier = Modifier.height(30.dp))
+
+    songInfo?.let { Text(text = it.title, color = colorDark, style = TextStyle(fontSize = 23.sp), modifier = Modifier.padding(horizontal = 10.dp)) }
     Spacer(modifier = Modifier.height(5.dp))
-    songInfo?.let { Text(text = it.singer, color = MaterialTheme.colorScheme.secondary, style = TextStyle(fontSize = 18.sp) ,modifier = Modifier.padding(horizontal = 5.dp)) }
+    songInfo?.let {
+        it.singer = it.singer.trimStart()
+        Text(text = it.singer.replace(";"," "), color = colorLight, style = TextStyle(fontSize = 18.sp) ,modifier = Modifier.padding(horizontal = 10.dp))
+    }
     Spacer(modifier = Modifier.height(20.dp))
 
     Slider(
@@ -622,11 +651,13 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
         onValueChange = {
             currentPosition = it.toInt()
             musicService?.seekTo(currentPosition)
-        }
+        },
+        modifier = Modifier.padding(horizontal = 10.dp),
+        colors = SliderDefaults.colors(thumbColor = colorDark,activeTrackColor = colorLight,inactiveTrackColor = colorLightset)
     )
     Box(modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 5.dp)) {
+        .padding(horizontal = 15.dp)) {
         Text(
             text = formatTime(currentPosition),
             modifier = Modifier.align(Alignment.CenterStart)
@@ -637,9 +668,9 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
         )
     }
 
-    Spacer(modifier = Modifier.height(60.dp))
+    Spacer(modifier = Modifier.height(25.dp))
     RowHorizal {
-        FilledTonalIconButton(
+        IconButton(
             onClick = {
 
                 musicService?.stopMusic()
@@ -652,12 +683,12 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
                     musicViewModel.songmid.value = info.songmid
                 }
 
-            }, modifier = Modifier.size(50.dp)
+            }, modifier = Modifier.size(50.dp), //colors = IconButtonDefaults.iconButtonColors(colorDark)
         ) {
-            Icon(painterResource(id = R.drawable.skip_previous), contentDescription = "",modifier = Modifier.size(30.dp))
+            Icon(painterResource(id = R.drawable.skip_previous), contentDescription = "",modifier = Modifier.size(30.dp), tint = colorDark)
         }
         Spacer(modifier = Modifier.width(30.dp))
-        FilledTonalIconButton(
+        FilledTonalButton(
             onClick = {
                 playing = if (playing) {
                     musicService?.pauseMusic()
@@ -669,17 +700,21 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
                 musicViewModel.isPlaying.value = playing // 更新 ViewModel 的播放状态
                 musicViewModel.currentSongUrl.value = songUrl // 更新 ViewModel 的歌曲 URL
                 musicViewModel.songInfo.value = songInfo
-            },modifier = Modifier.size(50.dp)//,enabled = canPlay
+            },
+           // modifier = Modifier.size(50.dp),
+           // enabled = canPlay ,
+            colors = ButtonDefaults.filledTonalButtonColors(colorLight.lighter(1.5f))
         ) {
-         //   if(canPlay) {
-                Icon(painterResource(id = if(playing) R.drawable.pause else R.drawable.play_arrow), contentDescription = "",modifier = Modifier.size(30.dp))
-           // } else {
-           //     Icon(painterResource(id = if(playing) R.drawable.pause else R.drawable.progress_activity), contentDescription = "",modifier = Modifier.size(30.dp))
-            //}
+           // Text(text = "播放")
+            if(canPlay) {
+                Icon(painterResource(id = if(playing) R.drawable.pause else R.drawable.play_arrow), contentDescription = "",modifier = Modifier.size(30.dp), tint = colorDark)
+            } else {
+                Icon(painterResource(id = if(playing) R.drawable.pause else R.drawable.progress_activity), contentDescription = "",modifier = Modifier.size(30.dp),tint = colorDark)
+            }
         }
         Spacer(modifier = Modifier.width(30.dp))
 
-        FilledTonalIconButton(
+        IconButton(
             onClick = {
                 musicService?.stopMusic()
                 val info = musicService?.playNext()
@@ -690,20 +725,57 @@ fun PlayUI(canPlay : Boolean,songUrl : String,musicViewModel: MusicViewModel,mus
                 if (info != null) {
                     musicViewModel.songmid.value = info.songmid
                 }
-            },modifier = Modifier.size(50.dp)
+            },modifier = Modifier.size(50.dp),//colors = IconButtonDefaults.iconButtonColors(colorDark)
         ) {
-            Icon(painterResource(id = R.drawable.skip_next), contentDescription = "",modifier = Modifier.size(30.dp))
+            Icon(painterResource(id = R.drawable.skip_next), contentDescription = "",modifier = Modifier.size(30.dp), tint = colorDark)
         }
-        Spacer(modifier = Modifier.width(30.dp))
+      //  Spacer(modifier = Modifier.width(30.dp))
 
-        FilledTonalIconButton(
+
+    }
+    Spacer(modifier = Modifier.height(25.dp))
+    val pad = 10.dp
+    RowHorizal {
+        IconButton(
             onClick = {
                 playing = false
                 musicViewModel.isPlaying.value = playing
                 musicService?.stopMusic()
             },modifier = Modifier.size(50.dp)
         ) {
-            Icon(painterResource(id = R.drawable.stop), contentDescription = "",modifier = Modifier.size(30.dp))
+            Icon(painterResource(id = R.drawable.replay), contentDescription = "",modifier = Modifier.size(30.dp),tint = colorDark)
+        }
+        Spacer(modifier = Modifier.width(pad))
+        IconButton(
+            onClick = {
+                MyToast(MyApplication.context.getString(R.string.developing))
+            },modifier = Modifier.size(50.dp)
+        ) {
+            Icon(painterResource(id = R.drawable.system_update_alt), contentDescription = "",modifier = Modifier.size(30.dp),tint = colorDark)
+        }
+        Spacer(modifier = Modifier.width(pad))
+        IconButton(
+            onClick = {
+                MyToast(MyApplication.context.getString(R.string.developing))
+            },modifier = Modifier.size(50.dp)
+        ) {
+            Icon(painterResource(id = R.drawable.album), contentDescription = "",modifier = Modifier.size(30.dp),tint = colorDark)
+        }
+        Spacer(modifier = Modifier.width(pad))
+        IconButton(
+            onClick = {
+                MyToast(MyApplication.context.getString(R.string.developing))
+            },modifier = Modifier.size(50.dp)
+        ) {
+            Icon(painterResource(id = R.drawable.add_circle), contentDescription = "",modifier = Modifier.size(30.dp),tint = colorDark)
+        }
+        Spacer(modifier = Modifier.width(pad))
+        IconButton(
+            onClick = {
+                MyToast(MyApplication.context.getString(R.string.developing))
+            },modifier = Modifier.size(50.dp)
+        ) {
+            Icon(painterResource(id = R.drawable.shuffle), contentDescription = "",modifier = Modifier.size(30.dp),tint = colorDark)
         }
     }
 }

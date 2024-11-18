@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
     private var musicService: MusicService? = null
     private var isBound = false
 
+
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as MusicService.MusicBinder

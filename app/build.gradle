@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0" // this version matches your Kotlin version
 }
 
 android {
@@ -12,7 +13,7 @@ android {
         minSdk 24
         targetSdk 34
         versionCode 1
-        versionName "Insider Preview"
+        versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -93,7 +94,8 @@ dependencies {
     //调色盘
     implementation 'androidx.palette:palette-ktx:1.0.0'
     //模糊库
-    implementation 'dev.chrisbanes.haze:haze:0.5.2'
+    implementation 'dev.chrisbanes.haze:haze:1.0.2'
+   // implementation 'dev.chrisbanes.haze:haze-materials:1.0.2'
     //媒体控制
 //    implementation 'androidx.media3:media3-exoplayer:1.2.1'
 //    implementation 'androidx.media3:media3-exoplayer-dash:1.2.1'

@@ -20,7 +20,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,7 +45,6 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -483,7 +481,9 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
         }
     }
 
-    LaunchedEffect(musicViewModel.songInfo.value?.albumImgId) {
+ //   val albumImgId by remember { mutableStateOf(musicViewModel.songInfo.value) }
+
+    LaunchedEffect(musicViewModel.songmid.value) {
         val id = musicViewModel.songInfo.value?.albumImgId ?: ""
 
         val url = if(id.isDigitsOnly()) MyApplication.qmxApi + "/getAlbumPicture?id=" + id else MyApplication.qmxApi + "/getAlbumPicture2?albumMid=" + id
@@ -675,7 +675,7 @@ fun PlayUI(color : Color?,songUrl : String,musicViewModel: MusicViewModel,musicS
 
                 musicService?.stopMusic()
                 val info = musicService?.playPrevious()
-                musicViewModel.songInfo.value = info?.let { SongInfo(title = it.title, songId = "", singer = info.singer, album = info.album, albumImgId = "") }
+                musicViewModel.songInfo.value = info?.let { SongInfo(title = it.title, songId = "", singer = info.singer, album = info.album, albumImgId = info.albumImgId) }
                 if (info != null) {
                     musicViewModel.currentSongUrl.value = info.url
                 }
@@ -703,13 +703,15 @@ fun PlayUI(color : Color?,songUrl : String,musicViewModel: MusicViewModel,musicS
             },
            // modifier = Modifier.size(50.dp),
            // enabled = canPlay ,
-            colors = ButtonDefaults.filledTonalButtonColors(colorLight.lighter(1.5f))
+            colors = ButtonDefaults.filledTonalButtonColors(colorLightset)
         ) {
            // Text(text = "播放")
             if(canPlay) {
-                Icon(painterResource(id = if(playing) R.drawable.pause else R.drawable.play_arrow), contentDescription = "",modifier = Modifier.size(30.dp), tint = colorDark)
+                Icon(painterResource(id = if(playing) R.drawable.pause else R.drawable.play_arrow), contentDescription = "",modifier = Modifier.size(30.dp), tint = colorLightset.adjustColorForIcon()
+                )
             } else {
-                Icon(painterResource(id = if(playing) R.drawable.pause else R.drawable.progress_activity), contentDescription = "",modifier = Modifier.size(30.dp),tint = colorDark)
+                Icon(painterResource(id = if(playing) R.drawable.pause else R.drawable.progress_activity), contentDescription = "",modifier = Modifier.size(30.dp),tint = colorLightset.adjustColorForIcon()
+                )
             }
         }
         Spacer(modifier = Modifier.width(30.dp))
@@ -718,7 +720,7 @@ fun PlayUI(color : Color?,songUrl : String,musicViewModel: MusicViewModel,musicS
             onClick = {
                 musicService?.stopMusic()
                 val info = musicService?.playNext()
-                musicViewModel.songInfo.value = info?.let { SongInfo(title = it.title, songId = "", singer = info.singer, album = info.album, albumImgId = "") }
+                musicViewModel.songInfo.value = info?.let { SongInfo(title = it.title, songId = "", singer = info.singer, album = info.album, albumImgId = info.albumImgId) }
                 if (info != null) {
                     musicViewModel.currentSongUrl.value = info.url
                 }
@@ -780,4 +782,3 @@ fun PlayUI(color : Color?,songUrl : String,musicViewModel: MusicViewModel,musicS
     }
 }
 
-// 将时长转换为 MM:SS 格式

@@ -1,6 +1,8 @@
 package com.chiuxah.wanwandongting.ui.activity
 
+import android.app.Activity
 import android.os.Looper
+import android.view.WindowManager
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -34,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -92,13 +96,23 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
     val songmid = vmMusic.songmid.value
 
     var nowTime by remember { mutableStateOf(musicService?.getCurrentPosition() ) }
+    val context = LocalContext.current
+    val playing by remember { mutableStateOf(vmMusic.isPlaying.value) }
+
     // 定期更新当前播放位置
-    LaunchedEffect(vmMusic.isPlaying.value) {
-        while (vmMusic.isPlaying.value == true) {
+    if(playing == true) {
+        //播放状态保持屏幕唤醒
+        (context as? Activity)?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    } else {
+        (context as? Activity)?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+    LaunchedEffect(playing) {
+        while (playing == true) {
             nowTime = musicService?.getCurrentPosition() ?: 0
             delay(1000L)
         }
     }
+
 
 
     if(songmid != null && songmid != "") {
@@ -140,7 +154,9 @@ fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicServ
         .fillMaxWidth()) {
         FloatingActionButton(
             onClick = {  blurStatus = !blurStatus  },
-            modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(10.dp),
             containerColor = Color.Transparent,
             elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(0.dp),
             contentColor = color?.darker() ?: MaterialTheme.colorScheme.primary
@@ -272,3 +288,48 @@ fun Color.lighter(factor: Float = 0.7f): Color {
         alpha = this.alpha
     )
 }
+
+fun Color.complementaryColor(): Color {
+    // 获取RGB分量
+    val red = (this.red * 255).toInt()
+    val green = (this.green * 255).toInt()
+    val blue = (this.blue * 255).toInt()
+    val alpha = (this.alpha * 255).toInt()
+
+    // 计算反色
+    val invertedRed = 255 - red
+    val invertedGreen = 255 - green
+    val invertedBlue = 255 - blue
+
+    // 返回新的Color
+    return Color(
+        red = invertedRed / 255f,
+        green = invertedGreen / 255f,
+        blue = invertedBlue / 255f,
+        alpha = alpha / 255f
+    )
+}
+
+fun Color.adjustColorForIcon(): Color {
+    val color = this
+    val luminance = color.luminance() // 获取亮度，范围为 0 到 1
+
+    return if (luminance < 0.5) {
+        // 深色变为非常浅的颜色 (接近白色)
+        Color(
+            red = (color.red + (1f - color.red) * 0.8f).coerceIn(0f, 1f),
+            green = (color.green + (1f - color.green) * 0.8f).coerceIn(0f, 1f),
+            blue = (color.blue + (1f - color.blue) * 0.8f).coerceIn(0f, 1f),
+            alpha = color.alpha
+        )
+    } else {
+        // 浅色变为非常深的颜色 (接近黑色)
+        Color(
+            red = (color.red * 0.2f).coerceIn(0f, 1f),
+            green = (color.green * 0.2f).coerceIn(0f, 1f),
+            blue = (color.blue * 0.2f).coerceIn(0f, 1f),
+            alpha = color.alpha
+        )
+    }
+}
+

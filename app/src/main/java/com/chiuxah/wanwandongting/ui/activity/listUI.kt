@@ -24,6 +24,7 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -166,6 +167,7 @@ fun listUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
                         }
                     },
                     shape = MaterialTheme.shapes.medium,
+
                     colors = TextFieldDefaults.textFieldColors(
                         focusedIndicatorColor = Color.Transparent, // 有焦点时的颜色，透明
                         unfocusedIndicatorColor = Color.Transparent, // 无焦点时的颜色，绿色
@@ -334,7 +336,8 @@ fun ListInfos(vmMusic : MusicViewModel,songList : List<SongListItem>?,vm: MyView
                        }) {
                          Icon(painterResource(id = R.drawable.playlist_add), contentDescription = "")
                     }
-                    }
+                    },
+                    colors = ListItemDefaults.colors()
                 )
                   }
             }

@@ -37,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -50,11 +52,15 @@ import com.chiuxah.wanwandongting.MusicService
 import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.logic.dataModel.NavigationBarItemData
+import com.chiuxah.wanwandongting.logic.utils.AndroidVersion
 import com.chiuxah.wanwandongting.ui.utils.HomeBar
 import com.chiuxah.wanwandongting.ui.utils.NavigateUtils.turnToBottomBar
 import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 import com.chiuxah.wanwandongting.viewModel.MyViewModel
+import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
 
@@ -65,9 +71,10 @@ fun HomeUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
     val SEARCH = 0
     val PLAY = 1
     val MY = 2
+    val surfaceColor = MaterialTheme.colorScheme.surface
     val navController = rememberNavController()
     val animation = stringResource(id = R.string.animation_speed).toInt()
-    val blur by remember { mutableStateOf(true) }
+    val blur by remember { mutableStateOf(AndroidVersion.isSupportedBlur ) }
     val hazeState = remember { HazeState() }
     var bottomBarItems by remember { mutableStateOf(SEARCH) }
     Scaffold(
@@ -85,18 +92,47 @@ fun HomeUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
                 //Divider()
             }
         },*/
+
         bottomBar = {
             Column {
-                if(bottomBarItems != PLAY)
-                Divider()
+                if(!blur) {
+                     if(bottomBarItems != PLAY) {
+                        Divider()
+                    }
+                }
+
                 NavigationBar(
                     containerColor =
-                    if(bottomBarItems != PLAY) {
-                        if(blur) MaterialTheme.colorScheme.primaryContainer.copy(.25f) else ListItemDefaults.containerColor
-                    } else Color.Transparent
+                   // if(bottomBarItems != PLAY) {
+                     //   if(blur) MaterialTheme.colorScheme.primaryContainer.copy(.25f) else ListItemDefaults.containerColor
+                   // } else
+                    if(blur) Color.Transparent else ListItemDefaults.containerColor
+
                     ,
                     modifier = Modifier
-                        .hazeChild(state = hazeState, blurRadius = MyApplication.blur, tint = Color.Transparent, noiseFactor = 0f)
+                        .hazeChild(state = hazeState,
+                            style = HazeStyle(
+                                tint = HazeTint(color =
+                                    if(bottomBarItems != PLAY) {
+                                        if(blur) MaterialTheme.colorScheme.surface else ListItemDefaults.containerColor
+                                    } else Color.Transparent,
+                                ),
+                                backgroundColor =  Color.Transparent
+                                ,blurRadius = MyApplication.blur,
+                                noiseFactor = 0f)
+                           // blurRadius = MyApplication.blur, tint = Color.Transparent, noiseFactor = 0f
+                        ) {
+
+
+                            //val colors = listOf<Color>(Color.White.copy(alpha = .5f), Color.Green.copy(alpha = .5f))
+//                            mask =  Brush.verticalGradient(
+//                                colors = listOf(
+//                                    Color.Transparent, // 顶部完全透明
+//                                    surfaceColor     // 底部完全白色
+//                                )
+//                            )
+                            progressive = HazeProgressive.verticalGradient(startIntensity = 0f, endIntensity = .7f, startY = 85f, endY = Float.POSITIVE_INFINITY)
+                        }
                 ) {
                     val items = listOf(
                         NavigationBarItemData(
@@ -164,7 +200,7 @@ fun HomeUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
             modifier = Modifier
                 .haze(
                     state = hazeState,
-                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    //backgroundColor = MaterialTheme.colorScheme.surface,
                 )
         ) {
             composable(HomeBar.Home.name) {

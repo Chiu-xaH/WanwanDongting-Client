@@ -29,14 +29,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
-import com.chiuxah.wanwandongting.MusicService
+import com.chiuxah.wanwandongting.service.MusicService
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.logic.dao.SongListDataBaseManager
-import com.chiuxah.wanwandongting.ui.utils.ActivedTopBar
-import com.chiuxah.wanwandongting.ui.utils.DividerText
-import com.chiuxah.wanwandongting.ui.utils.LittleDialog
-import com.chiuxah.wanwandongting.ui.utils.MyCard
-import com.chiuxah.wanwandongting.ui.utils.Round
+import com.chiuxah.wanwandongting.ui.utils.components.ActivedTopBar
+import com.chiuxah.wanwandongting.ui.utils.components.DividerText
+import com.chiuxah.wanwandongting.ui.utils.components.LittleDialog
+import com.chiuxah.wanwandongting.ui.utils.components.MyCard
+import com.chiuxah.wanwandongting.ui.utils.style.Round
 import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 import com.chiuxah.wanwandongting.viewModel.MyViewModel
 

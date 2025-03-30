@@ -11,6 +11,7 @@ class MyApplication : Application() {
         @SuppressLint("StaticFieldLeak")
         lateinit var context: Context
         const val qmxApi = "https://qmx-api.vercel.app/"
+//        const val qmxApi = "http://115.120.209.236:5000/"
         const val qmApi = "https://c.y.qq.com/"
         const val animationSpeed = 400
         val blur = 20.dp

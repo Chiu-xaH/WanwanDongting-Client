@@ -1,4 +1,4 @@
-package com.chiuxah.wanwandongting.ui.utils
+package com.chiuxah.wanwandongting.ui.utils.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.chiuxah.wanwandongting.R
 
 //@Composable
 //fun EmptyUI()  { statusUI(R.drawable.manga,"结果为空") }

@@ -46,22 +46,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.chiuxah.wanwandongting.MusicService
+import com.chiuxah.wanwandongting.service.MusicService
 import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.logic.dao.SongListDataBaseManager
-import com.chiuxah.wanwandongting.logic.dataModel.ListInfo
-import com.chiuxah.wanwandongting.logic.dataModel.ListInfoResponse
-import com.chiuxah.wanwandongting.logic.dataModel.SingleSongInfo
-import com.chiuxah.wanwandongting.logic.dataModel.SongListItem
-import com.chiuxah.wanwandongting.logic.dataModel.SongInfo
+import com.chiuxah.wanwandongting.logic.bean.ListInfo
+import com.chiuxah.wanwandongting.logic.bean.ListInfoResponse
+import com.chiuxah.wanwandongting.logic.bean.SingleSongInfo
+import com.chiuxah.wanwandongting.logic.bean.SongListItem
+import com.chiuxah.wanwandongting.logic.bean.SongInfo
 import com.chiuxah.wanwandongting.logic.utils.reEmptyLiveDta
-import com.chiuxah.wanwandongting.ui.utils.BottomTip
-import com.chiuxah.wanwandongting.ui.utils.MyCard
-import com.chiuxah.wanwandongting.ui.utils.MyToast
-import com.chiuxah.wanwandongting.ui.utils.Round
-import com.chiuxah.wanwandongting.ui.utils.RowHorizal
-import com.chiuxah.wanwandongting.ui.utils.ScrollText
+import com.chiuxah.wanwandongting.ui.utils.components.BottomTip
+import com.chiuxah.wanwandongting.ui.utils.components.MyCard
+import com.chiuxah.wanwandongting.ui.utils.components.MyToast
+import com.chiuxah.wanwandongting.ui.utils.style.Round
+import com.chiuxah.wanwandongting.ui.utils.style.RowHorizontal
+import com.chiuxah.wanwandongting.ui.utils.components.ScrollText
+import com.chiuxah.wanwandongting.ui.utils.style.TextFiledTransplant
 import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 import com.chiuxah.wanwandongting.viewModel.MyViewModel
 import com.google.gson.Gson
@@ -168,10 +169,7 @@ fun listUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
                     },
                     shape = MaterialTheme.shapes.medium,
 
-                    colors = TextFieldDefaults.textFieldColors(
-                        focusedIndicatorColor = Color.Transparent, // 有焦点时的颜色，透明
-                        unfocusedIndicatorColor = Color.Transparent, // 无焦点时的颜色，绿色
-                    ),
+                    colors = TextFiledTransplant(),
 
                 )
             }
@@ -186,7 +184,7 @@ fun listUI(vm : MyViewModel,vmMusic : MusicViewModel,musicService: MusicService?
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                RowHorizal {
+                RowHorizontal {
                     Spacer(modifier = Modifier.height(5.dp))
                     CircularProgressIndicator()
                 }
@@ -237,7 +235,7 @@ fun getListInfo(vm : MyViewModel) : ListInfo? {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListInfos(vmMusic : MusicViewModel,songList : List<SongListItem>?,vm: MyViewModel,musicService : MusicService?,listInfo: ListInfo?) {
+fun ListInfos(vmMusic : MusicViewModel, songList : List<SongListItem>?, vm: MyViewModel, musicService : MusicService?, listInfo: ListInfo?) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(false) }
 
@@ -393,7 +391,7 @@ suspend fun getSongUrl(songmid: String, vm: MyViewModel): String? {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun savedListUI(vm: MyViewModel,listId : Long,vmMusic: MusicViewModel,musicService: MusicService?,listTitle : String) {
+fun savedListUI(vm: MyViewModel, listId : Long, vmMusic: MusicViewModel, musicService: MusicService?, listTitle : String) {
     var input by remember { mutableStateOf("") }
 
     var loading by remember { mutableStateOf(true) }
@@ -445,7 +443,7 @@ fun savedListUI(vm: MyViewModel,listId : Long,vmMusic: MusicViewModel,musicServi
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                RowHorizal {
+                RowHorizontal {
                     Spacer(modifier = Modifier.height(5.dp))
                     CircularProgressIndicator()
                 }
@@ -482,10 +480,7 @@ fun savedListUI(vm: MyViewModel,listId : Long,vmMusic: MusicViewModel,musicServi
                                 }
                             },
                             shape = MaterialTheme.shapes.medium,
-                            colors = TextFieldDefaults.textFieldColors(
-                                focusedIndicatorColor = Color.Transparent, // 有焦点时的颜色，透明
-                                unfocusedIndicatorColor = Color.Transparent, // 无焦点时的颜色，绿色
-                            ),
+                            colors = TextFiledTransplant(),
                         )
                     }
 

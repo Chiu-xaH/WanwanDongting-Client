@@ -1,7 +1,7 @@
 package com.chiuxah.wanwandongting.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.MutableLiveData
-import com.chiuxah.wanwandongting.logic.dataModel.SongInfo
+import com.chiuxah.wanwandongting.logic.bean.SongInfo
 
 class MusicViewModel : ViewModel() {
     // 是否正在播放

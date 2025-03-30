@@ -1,4 +1,4 @@
-package com.chiuxah.wanwandongting.ui.utils
+package com.chiuxah.wanwandongting.ui.utils.style
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable

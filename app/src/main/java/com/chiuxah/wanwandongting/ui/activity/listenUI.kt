@@ -81,25 +81,25 @@ import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import com.chiuxah.wanwandongting.MusicService
+import com.chiuxah.wanwandongting.service.MusicService
 import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
-import com.chiuxah.wanwandongting.logic.dataModel.SearchResponse
-import com.chiuxah.wanwandongting.logic.dataModel.SingleSongInfo
-import com.chiuxah.wanwandongting.logic.dataModel.SongInfo
+import com.chiuxah.wanwandongting.logic.bean.SearchResponse
+import com.chiuxah.wanwandongting.logic.bean.SingleSongInfo
+import com.chiuxah.wanwandongting.logic.bean.SongInfo
 import com.chiuxah.wanwandongting.logic.utils.reEmptyLiveDta
 import com.chiuxah.wanwandongting.ui.activity.AlbumImgApiType.*
-import com.chiuxah.wanwandongting.ui.utils.MyCard
-import com.chiuxah.wanwandongting.ui.utils.MyToast
-import com.chiuxah.wanwandongting.ui.utils.Round
-import com.chiuxah.wanwandongting.ui.utils.RowHorizal
-import com.chiuxah.wanwandongting.ui.utils.ScrollText
+import com.chiuxah.wanwandongting.ui.utils.components.MyCard
+import com.chiuxah.wanwandongting.ui.utils.components.MyToast
+import com.chiuxah.wanwandongting.ui.utils.style.Round
+import com.chiuxah.wanwandongting.ui.utils.style.RowHorizontal
+import com.chiuxah.wanwandongting.ui.utils.components.ScrollText
+import com.chiuxah.wanwandongting.ui.utils.style.TextFiledTransplant
 import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 import com.chiuxah.wanwandongting.viewModel.MyViewModel
 import com.google.gson.Gson
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.*
 
 enum class AlbumImgApiType {
     IMGID,ALBUM_MID
@@ -155,7 +155,7 @@ fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel,vmMusic: MusicViewMod
             Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
             Spacer(modifier = Modifier.height(25.dp))
             //内容主体
-            RowHorizal {
+            RowHorizontal {
                 TextField(
                     modifier = Modifier
                         .weight(1f)
@@ -176,10 +176,7 @@ fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel,vmMusic: MusicViewMod
                         }
                     },
                     shape = MaterialTheme.shapes.medium,
-                    colors = TextFieldDefaults.textFieldColors(
-                        focusedIndicatorColor = Color.Transparent, // 有焦点时的颜色，透明
-                        unfocusedIndicatorColor = Color.Transparent, // 无焦点时的颜色，绿色
-                    ),
+                    colors = TextFiledTransplant(),
                 )
             }
             AnimatedVisibility(
@@ -187,7 +184,7 @@ fun ListenUI(innerPadding : PaddingValues,vm : MyViewModel,vmMusic: MusicViewMod
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                RowHorizal {
+                RowHorizontal {
                     Spacer(modifier = Modifier.height(5.dp))
                     CircularProgressIndicator()
                 }
@@ -464,7 +461,7 @@ var count = 0
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicViewModel) {
+fun PlayOnUI(vm : MyViewModel, musicService: MusicService?, musicViewModel: MusicViewModel) {
    // val musicViewModel: MusicViewModel = viewModel()
     val TAB_PLAY = 1
     val TAB_LYRICS = 2
@@ -563,7 +560,7 @@ fun PlayOnUI(vm : MyViewModel,musicService: MusicService?,musicViewModel: MusicV
 }
 
 @Composable
-fun PlayUI(color : Color?,songUrl : String,musicViewModel: MusicViewModel,musicService: MusicService?,canPlay : Boolean) {
+fun PlayUI(color : Color?, songUrl : String, musicViewModel: MusicViewModel, musicService: MusicService?, canPlay : Boolean) {
 
 
     var playing by remember { mutableStateOf(musicViewModel.isPlaying.value ?: false) }
@@ -609,7 +606,7 @@ fun PlayUI(color : Color?,songUrl : String,musicViewModel: MusicViewModel,musicS
 
     Spacer(modifier = Modifier.height(30.dp))
 
-        RowHorizal {
+        RowHorizontal {
             songInfo?.let {
                 AlbumImg(albumImgId = it.albumImgId,
                     modifier = Modifier
@@ -669,7 +666,7 @@ fun PlayUI(color : Color?,songUrl : String,musicViewModel: MusicViewModel,musicS
     }
 
     Spacer(modifier = Modifier.height(25.dp))
-    RowHorizal {
+    RowHorizontal {
         IconButton(
             onClick = {
 
@@ -737,7 +734,7 @@ fun PlayUI(color : Color?,songUrl : String,musicViewModel: MusicViewModel,musicS
     }
     Spacer(modifier = Modifier.height(25.dp))
     val pad = 10.dp
-    RowHorizal {
+    RowHorizontal {
         IconButton(
             onClick = {
                 playing = false

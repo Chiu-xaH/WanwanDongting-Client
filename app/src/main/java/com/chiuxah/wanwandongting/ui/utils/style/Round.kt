@@ -1,4 +1,4 @@
-package com.chiuxah.wanwandongting.ui.utils
+package com.chiuxah.wanwandongting.ui.utils.style
 
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState

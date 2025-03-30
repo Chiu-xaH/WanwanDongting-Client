@@ -15,14 +15,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.FloatingActionButtonElevation
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +40,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.chiuxah.wanwandongting.MusicService
+import com.chiuxah.wanwandongting.service.MusicService
 import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
 import com.chiuxah.wanwandongting.viewModel.MusicViewModel
@@ -91,7 +88,7 @@ fun parseLyrics(lyrics: String): List<Pair<String, String>> {
 
 
 @Composable
-fun lyricsUI(vmMusic : MusicViewModel,vm  : MyViewModel,musicService : MusicService?,color : Color?,innerPadding : PaddingValues) {
+fun lyricsUI(vmMusic : MusicViewModel, vm  : MyViewModel, musicService : MusicService?, color : Color?, innerPadding : PaddingValues) {
     var loading by remember { mutableStateOf(true) }
     val songmid = vmMusic.songmid.value
 

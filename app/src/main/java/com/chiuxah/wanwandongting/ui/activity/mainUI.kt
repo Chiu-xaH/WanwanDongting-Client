@@ -1,7 +1,6 @@
 package com.chiuxah.wanwandongting.ui.activity
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -24,11 +23,8 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,21 +33,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.chiuxah.wanwandongting.MusicService
+import com.chiuxah.wanwandongting.service.MusicService
 import com.chiuxah.wanwandongting.MyApplication
 import com.chiuxah.wanwandongting.R
-import com.chiuxah.wanwandongting.logic.dataModel.NavigationBarItemData
+import com.chiuxah.wanwandongting.logic.bean.NavigationBarItemData
 import com.chiuxah.wanwandongting.logic.utils.AndroidVersion
 import com.chiuxah.wanwandongting.ui.utils.HomeBar
 import com.chiuxah.wanwandongting.ui.utils.NavigateUtils.turnToBottomBar

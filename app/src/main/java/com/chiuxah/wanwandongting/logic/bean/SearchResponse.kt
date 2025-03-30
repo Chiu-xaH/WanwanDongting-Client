@@ -1,4 +1,4 @@
-package com.chiuxah.wanwandongting.logic.dataModel
+package com.chiuxah.wanwandongting.logic.bean
 
 
 data class SearchResponse(val data : SearchData)

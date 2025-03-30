@@ -14,10 +14,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
-import com.chiuxah.wanwandongting.MusicService
+import com.chiuxah.wanwandongting.service.MusicService
 import com.chiuxah.wanwandongting.ui.activity.HomeUI
 import com.chiuxah.wanwandongting.ui.theme.WanwanDongtingTheme
-import com.chiuxah.wanwandongting.ui.utils.TransparentSystemBars
+import com.chiuxah.wanwandongting.ui.utils.style.TransparentSystemBars
 import com.chiuxah.wanwandongting.viewModel.MusicViewModel
 import com.chiuxah.wanwandongting.viewModel.MyViewModel
 class MainActivity : ComponentActivity() {

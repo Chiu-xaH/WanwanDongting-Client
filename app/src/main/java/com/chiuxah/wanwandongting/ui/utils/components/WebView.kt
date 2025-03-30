@@ -1,4 +1,4 @@
-package com.chiuxah.wanwandongting.ui.utils
+package com.chiuxah.wanwandongting.ui.utils.components
 
 import android.annotation.SuppressLint
 import android.webkit.WebResourceRequest

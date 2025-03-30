@@ -1,4 +1,4 @@
-package com.chiuxah.wanwandongting.logic.dataModel
+package com.chiuxah.wanwandongting.logic.bean
 
 import androidx.compose.ui.graphics.painter.Painter
 

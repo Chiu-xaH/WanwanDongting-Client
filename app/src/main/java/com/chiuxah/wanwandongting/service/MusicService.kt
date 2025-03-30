@@ -1,4 +1,4 @@
-package com.chiuxah.wanwandongting
+package com.chiuxah.wanwandongting.service
 
 import android.app.Service
 import android.content.Intent
@@ -7,8 +7,10 @@ import android.os.Binder
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import com.chiuxah.wanwandongting.logic.dataModel.SingleSongInfo
-import com.chiuxah.wanwandongting.ui.utils.MyToast
+import com.chiuxah.wanwandongting.MyApplication
+import com.chiuxah.wanwandongting.R
+import com.chiuxah.wanwandongting.logic.bean.SingleSongInfo
+import com.chiuxah.wanwandongting.ui.utils.components.MyToast
 
 class MusicService() : Service() {
 

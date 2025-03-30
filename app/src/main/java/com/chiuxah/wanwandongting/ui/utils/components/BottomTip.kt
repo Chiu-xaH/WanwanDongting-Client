@@ -1,4 +1,4 @@
-package com.chiuxah.wanwandongting.ui.utils
+package com.chiuxah.wanwandongting.ui.utils.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
